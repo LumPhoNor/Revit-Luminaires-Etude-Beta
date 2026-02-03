@@ -1,0 +1,129 @@
+{
+  "version": "0.9.0-beta",
+  "isBeta": true,
+  "betaExpirationDate": "2026-06-01",
+  "lastUpdated": "2026-02-03T00:00:00Z",
+  "repository": "https://github.com/LumPhoNor/Revit-Luminaires-Etude-Beta",
+  
+  "betaNotice": {
+    "title": "🧪 Version BETA",
+    "message": "Vous utilisez la version BETA de LumPhoNor. Merci de rapporter les bugs !",
+    "showOnStartup": true
+  },
+
+  "manufacturers": [
+    {
+      "id": "iguzzini",
+      "name": "iGuzzini illuminazione",
+      "country": "IT",
+      "website": "https://www.iguzzini.com"
+    },
+    {
+      "id": "downlight-round-led",
+      "name": "Downlight - Round - LED",
+      "country": "Generic",
+      "website": ""
+    }
+  ],
+
+  "categories": [
+    {
+      "id": "downlight",
+      "name": "Downlights",
+      "icon": "💡"
+    },
+    {
+      "id": "linear",
+      "name": "Luminaires linéaires",
+      "icon": "━"
+    }
+  ],
+
+  "luminaires": [
+    {
+      "id": "downlight-led15fm12-w120",
+      "manufacturer": "downlight-round-led",
+      "category": "downlight",
+      "name": "LED15FM12-W120",
+      "reference": "LED15FM12-W120",
+      "description": "Downlight LED rond encastré - 15W - 2700K",
+      "technicalSpecs": {
+        "power": 15,
+        "flux": 1000,
+        "efficacy": 67,
+        "colorTemp": 2700,
+        "cri": 80,
+        "ipRating": "IP20",
+        "dimming": "Standard",
+        "mountingType": "Encastré"
+      },
+      "files": {
+        "rfa": "manufacturers/Downlight/LED15FM12_W120/LED15FM12.rfa",
+        "ies": "manufacturers/Downlight/LED15FM12_W120/LED15FM12.ies",
+        "info": "manufacturers/Downlight/LED15FM12_W120/info.json"
+      },
+      "applications": ["Bureau", "Couloir", "Commerce"],
+      "tags": ["LED", "Encastré", "Downlight"],
+      "addedDate": "2026-02-03",
+      "version": "0.9.0-beta"
+    },
+    {
+      "id": "iguzzini-r925-g1-d55y",
+      "manufacturer": "iguzzini",
+      "category": "linear",
+      "name": "Light Shed R925.G1_D55Y",
+      "reference": "R925.G1_D55Y",
+      "description": "Luminaire linéaire LED - 1195mm - DALI - Émission vers le bas - 21.5W 2368lm - 3000K - CRI 90",
+      "technicalSpecs": {
+        "power": 21.5,
+        "flux": 2368,
+        "efficacy": 110,
+        "colorTemp": 3000,
+        "cri": 90,
+        "length": 1195,
+        "width": 128,
+        "ipRating": "IP20",
+        "dimming": "DALI",
+        "mountingType": "Suspendu/Applique"
+      },
+      "files": {
+        "rfa": "manufacturers/iGuzzini/R925_G1_D55Y/R925.rfa",
+        "ies": "manufacturers/iGuzzini/R925_G1_D55Y/R925.ies",
+        "info": "manufacturers/iGuzzini/R925_G1_D55Y/info.json"
+      },
+      "applications": ["Bureau", "Commerce", "Éducation"],
+      "tags": ["LED", "DALI", "Linéaire", "Haute efficacité"],
+      "addedDate": "2026-02-03",
+      "version": "0.9.0-beta"
+    },
+    {
+      "id": "iguzzini-r924-01",
+      "manufacturer": "iguzzini",
+      "category": "linear",
+      "name": "Light Shed R924.01",
+      "reference": "R924.01",
+      "description": "Luminaire linéaire LED - 1195mm - Down - 3000K - CRI 80",
+      "technicalSpecs": {
+        "power": 21,
+        "flux": 2368,
+        "efficacy": 112,
+        "colorTemp": 3000,
+        "cri": 80,
+        "length": 1195,
+        "width": 128,
+        "ipRating": "IP20",
+        "dimming": "Standard",
+        "mountingType": "Suspendu"
+      },
+      "files": {
+        "rfa": "manufacturers/iGuzzini/R924_01/R924.rfa",
+        "ies": "manufacturers/iGuzzini/R924_01/R924.ies",
+        "info": "manufacturers/iGuzzini/R924_01/info.json"
+      },
+      "applications": ["Bureau", "Salle de réunion"],
+      "tags": ["LED", "Linéaire"],
+      "addedDate": "2026-02-03",
+      "version": "0.9.0-beta"
+    }
+  ]
+}
