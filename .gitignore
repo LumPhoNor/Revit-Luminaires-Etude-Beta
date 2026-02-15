@@ -108,7 +108,13 @@ nunit-*.xml
 # DLL copiée dans Addins (ne pas versionner)
 *.addin.bak
 
-# Fichiers de log du plugin
+# ───────────────────────────────────────────────────────────
+# LOGS - Dossier complet
+# ───────────────────────────────────────────────────────────
+Logs/
+*.log
+
+# Fichiers de log du plugin (anciens)
 RevitLightingPlugin_Debug.log
 *_Debug.log
 
