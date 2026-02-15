@@ -1,0 +1,233 @@
+# ═══════════════════════════════════════════════════════════
+# .gitignore pour RevitLightingPlugin
+# Projet : Plugin Revit 2026 (.NET Framework 4.8)
+# ═══════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────
+# Build results
+# ───────────────────────────────────────────────────────────
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# ───────────────────────────────────────────────────────────
+# Visual Studio cache/options
+# ───────────────────────────────────────────────────────────
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# ───────────────────────────────────────────────────────────
+# Visual Studio Code
+# ───────────────────────────────────────────────────────────
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ───────────────────────────────────────────────────────────
+# ReSharper
+# ───────────────────────────────────────────────────────────
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# ───────────────────────────────────────────────────────────
+# NuGet Packages
+# ───────────────────────────────────────────────────────────
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ───────────────────────────────────────────────────────────
+# .NET Core / .NET
+# ───────────────────────────────────────────────────────────
+*.dll
+*.exe
+*.pdb
+*.cache
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# ───────────────────────────────────────────────────────────
+# Test Results
+# ───────────────────────────────────────────────────────────
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# ───────────────────────────────────────────────────────────
+# Revit Plugin Specific
+# ───────────────────────────────────────────────────────────
+# DLL copiée dans Addins (ne pas versionner)
+*.addin.bak
+
+# Fichiers de log du plugin
+RevitLightingPlugin_Debug.log
+*_Debug.log
+
+# ───────────────────────────────────────────────────────────
+# SQLite Database (données locales)
+# ───────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Mais garder la structure (si fichier .sql existe)
+!*.sql
+
+# ───────────────────────────────────────────────────────────
+# Fichiers temporaires du plugin
+# ───────────────────────────────────────────────────────────
+# Exports temporaires de vues
+**/RevitLightingPlugin/Views/*.png
+**/RevitLightingPlugin/Views/*.jpg
+
+# Rapports PDF exportés (ne pas versionner les exports utilisateur)
+Export PDF/*.pdf
+Rapport_*.pdf
+
+# Grilles et heatmaps générés
+GridMap_*.png
+Heatmap3D_*.png
+
+# ───────────────────────────────────────────────────────────
+# Fichiers de configuration utilisateur
+# ───────────────────────────────────────────────────────────
+# Settings.json contient les chemins locaux
+settings.json
+appsettings.local.json
+
+# ───────────────────────────────────────────────────────────
+# Windows
+# ───────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ───────────────────────────────────────────────────────────
+# Fichiers de sauvegarde
+# ───────────────────────────────────────────────────────────
+*.bak
+*.backup
+*~
+*.swp
+*.swo
+
+# ───────────────────────────────────────────────────────────
+# Fichiers Revit
+# ───────────────────────────────────────────────────────────
+# Fichiers de backup Revit
+*.0001.rvt
+*.0002.rvt
+*.0003.rvt
+*.0004.rvt
+*.0005.rvt
+*.0006.rvt
+*.0007.rvt
+*.0008.rvt
+*.0009.rvt
+
+# Fichiers journaux Revit
+*.log
+*.txt
+
+# Fichiers de verrouillage central
+*_central.rvt
+
+# ───────────────────────────────────────────────────────────
+# Fichiers IES (selon besoin)
+# ───────────────────────────────────────────────────────────
+# Si vous ne voulez pas versionner les fichiers IES volumineux :
+# *.ies
+# Mais gardez les IES de test :
+# !**/TestData/*.ies
+
+# ───────────────────────────────────────────────────────────
+# Documentation générée automatiquement
+# ───────────────────────────────────────────────────────────
+[Dd]oc/[Hh]tml/
+[Dd]oc/[Ll]atex/
+
+# ───────────────────────────────────────────────────────────
+# NCrunch (outil de test)
+# ───────────────────────────────────────────────────────────
+*.ncrunch*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# ───────────────────────────────────────────────────────────
+# Fichiers de Claude Code (mémoire locale - NE PAS VERSIONNER)
+# ───────────────────────────────────────────────────────────
+INSTRUCTIONS_TEST.md
+FORMULES_PHOTOMETRIQUES.md
+CLAUDE.md
+
+# ───────────────────────────────────────────────────────────
+# EXCEPTIONS - Fichiers à TOUJOURS inclure
+# ───────────────────────────────────────────────────────────
+# Forcer l'inclusion de certains fichiers même s'ils matchent des patterns ci-dessus
+!README.md
+!LICENSE
+!.gitignore
+!.editorconfig
+
+# ───────────────────────────────────────────────────────────
+# Fichiers de dépendances à garder
+# ───────────────────────────────────────────────────────────
+# Garder les DLL de référence Revit (si nécessaire)
+# !References/*.dll
+
+# ═══════════════════════════════════════════════════════════
+# Fin du .gitignore
+# ═══════════════════════════════════════════════════════════
