@@ -55,6 +55,8 @@ namespace RevitLightingPlugin.Core
 
         public LightingResult CalculateForRoom(Room room, AnalysisSettings settings, double workPlaneHeight)
         {
+            Logger.Debug("LightingCalculator", $"▶ CalculateForRoom: {room.Name}, h={workPlaneHeight:F2}m");
+
             var result = new LightingResult
             {
                 RoomName = room.Name,
@@ -70,9 +72,11 @@ namespace RevitLightingPlugin.Core
 
             var luminaires = GetLuminairesInRoom(room);
             result.LuminaireCount = luminaires.Count;
+            Logger.Info("LightingCalculator", $"  {luminaires.Count} luminaire(s) trouvé(s) dans {room.Name}");
 
             if (luminaires.Count == 0)
             {
+                Logger.Warning("LightingCalculator", $"Aucun luminaire dans {room.Name}");
                 result.AverageIlluminance = 0;
                 result.UniformityRatio = 0;
                 result.TotalPower = 0;
@@ -95,12 +99,14 @@ namespace RevitLightingPlugin.Core
             }
 
             result.TotalPower = totalPower;
+            Logger.Debug("LightingCalculator", $"  Flux total: {totalLumens:F0} lm, Puissance: {totalPower:F0} W");
 
             // Convertir mètres en pieds pour Revit
             double gridSpacingFeet = settings.GridSpacing * 3.28084;
             double workplaneHeightFeet = workPlaneHeight * 3.28084;
 
             // NOUVEAU : Calcul par grille de points avec paramètres
+            Logger.Debug("LightingCalculator", "  Calcul de la grille d'éclairement...");
             result.GridPoints = CalculateGridIlluminance(room, luminaires, result.Luminaires, gridSpacingFeet, workplaneHeightFeet, settings);
 
             if (result.GridPoints.Count > 0)
@@ -112,6 +118,8 @@ namespace RevitLightingPlugin.Core
 
                 // P4: Calcul uniformité locale selon EN 12464-1 section 4.3
                 result.LocalUniformity = CalculateLocalUniformity(result.GridPoints, gridSpacingFeet);
+
+                Logger.Info("LightingCalculator", $"  📊 Résultats: Em={result.AverageIlluminance:F0} lux, Emin={result.MinIlluminance:F0} lux, Emax={result.MaxIlluminance:F0} lux, U0={result.UniformityRatio:F2}, Uh={result.LocalUniformity:F2}");
             }
             else
             {
@@ -129,6 +137,7 @@ namespace RevitLightingPlugin.Core
                 ? "L'éclairage est conforme aux normes."
                 : "L'éclairage est insuffisant. Ajoutez des luminaires ou augmentez leur puissance.";
 
+            Logger.Debug("LightingCalculator", $"◀ CalculateForRoom terminé: {room.Name}");
             return result;
         }
 

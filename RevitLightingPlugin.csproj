@@ -129,6 +129,7 @@
     <Compile Include="Core\IESParser.cs" />
     <Compile Include="Core\LightingCalculator.cs" />
     <Compile Include="Core\LightingResult.cs" />
+    <Compile Include="Core\Logger.cs" />
     <Compile Include="Core\PDFPageEventHelper.cs" />
     <Compile Include="Core\PDFReportGenerator.cs" />
     <Compile Include="Core\PhotometricAnalyzer.cs" />

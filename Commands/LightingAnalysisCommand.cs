@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Diagnostics;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
@@ -17,56 +18,82 @@ namespace RevitLightingPlugin.Commands
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            var stopwatch = Stopwatch.StartNew();
+            Logger.Separator("LIGHTING ANALYSIS COMMAND");
+            Logger.Info("LightingAnalysisCmd", "🚀 Commande d'analyse d'éclairement lancée");
+            Logger.EnterMethod("LightingAnalysisCommand", "Execute");
+
             try
             {
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;
                 Document doc = uidoc.Document;
+                Logger.Info("LightingAnalysisCmd", $"Document: {doc.Title}");
 
                 // Ouvrir la fenêtre de sélection des pièces AVEC choix du type d'activité
+                Logger.Debug("LightingAnalysisCmd", "Ouverture fenêtre de sélection des pièces");
                 var roomSelectionWindow = new RoomSelectionWindow(doc);
                 if (roomSelectionWindow.ShowDialog() != true)
                 {
+                    Logger.Warning("LightingAnalysisCmd", "Sélection de pièces annulée par l'utilisateur");
+                    Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Cancelled");
                     return Result.Cancelled;
                 }
 
                 var selectedRooms = roomSelectionWindow.SelectedRooms;
                 var roomActivities = roomSelectionWindow.RoomActivities;
+                Logger.Info("LightingAnalysisCmd", $"{selectedRooms.Count} pièce(s) sélectionnée(s)");
 
                 if (selectedRooms == null || selectedRooms.Count == 0)
                 {
+                    Logger.Warning("LightingAnalysisCmd", "Aucune pièce sélectionnée");
                     TaskDialog.Show("Erreur", "Aucune pièce sélectionnée.");
+                    Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Failed");
                     return Result.Failed;
                 }
 
                 // Ouvrir la fenêtre de configuration d'analyse
+                Logger.Debug("LightingAnalysisCmd", "Ouverture fenêtre de configuration d'analyse");
                 var analysisWindow = new LightingAnalysisWindow(doc);
                 if (analysisWindow.ShowDialog() != true)
                 {
+                    Logger.Warning("LightingAnalysisCmd", "Configuration d'analyse annulée par l'utilisateur");
+                    Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Cancelled");
                     return Result.Cancelled;
                 }
 
                 var settings = analysisWindow.Settings;
                 double maintenanceFactor = analysisWindow.MaintenanceFactor;
+                Logger.Info("LightingAnalysisCmd", $"Paramètres: GridSpacing={settings.GridSpacing}m, Heights={string.Join(",", settings.WorkPlaneHeights)}m, MF={maintenanceFactor:F2}");
 
                 // Effectuer les calculs
+                Logger.Info("LightingAnalysisCmd", "Initialisation du calculateur d'éclairement");
                 var calculator = new LightingCalculator(doc);
                 var results = new List<CalculationResult>();
 
                 // Export des vues 2D/3D
                 string tempFolder = Path.Combine(Path.GetTempPath(), "RevitLightingPlugin", "Views");
+                Logger.Debug("LightingAnalysisCmd", $"Dossier temporaire vues: {tempFolder}");
                 var viewExporter = new ViewExporter(doc, tempFolder);
                 var roomViewExports = new Dictionary<ElementId, RoomViewsExport>();
 
                 // Exporter vues pour chaque pièce
+                Logger.Info("LightingAnalysisCmd", "Export des vues 2D/3D des pièces");
                 foreach (var room in selectedRooms)
                 {
+                    Logger.Debug("LightingAnalysisCmd", $"Export vues pour pièce: {room.Name}");
                     var viewExport = viewExporter.ExportRoomViews(room);
                     roomViewExports[room.Id] = viewExport;
                 }
 
                 // Effectuer les calculs
+                Logger.Separator("CALCULS D'ÉCLAIREMENT");
+                Logger.Info("LightingAnalysisCmd", $"Début des calculs pour {selectedRooms.Count} pièce(s)");
+
                 foreach (var room in selectedRooms)
                 {
+                    var roomStopwatch = Stopwatch.StartNew();
+                    Logger.Info("LightingAnalysisCmd", $"📊 Calcul pour pièce: {room.Name} ({room.Number})");
+
                     try
                     {
                         // Récupérer le type d'activité choisi pour cette pièce
@@ -74,6 +101,7 @@ namespace RevitLightingPlugin.Commands
                         if (roomActivities.ContainsKey(room.Id))
                         {
                             activityType = roomActivities[room.Id];
+                            Logger.Debug("LightingAnalysisCmd", $"Type d'activité: {activityType.DisplayName} (requis: {activityType.RequiredLux} lux)");
                         }
 
                         // Créer le résultat de base (propriétés au niveau pièce)
@@ -103,6 +131,7 @@ namespace RevitLightingPlugin.Commands
 
                         foreach (double height in settings.WorkPlaneHeights)
                         {
+                            Logger.Debug("LightingAnalysisCmd", $"Calcul pour hauteur: {height:F2}m");
                             var lightingResult = calculator.CalculateForRoom(room, settings, height);
 
                             if (lightingResult != null)
@@ -156,6 +185,7 @@ namespace RevitLightingPlugin.Commands
                                 };
 
                                 result.HeightResults.Add(heightResult);
+                                Logger.Info("LightingAnalysisCmd", $"  ✅ h={height:F2}m => Em={heightResult.AverageIlluminance:F0} lux, U0={heightResult.Uniformity:F2}");
 
                                 // Récupérer les luminaires (une seule fois, indépendant de la hauteur)
                                 if (result.LuminaireCount == 0)
@@ -256,10 +286,13 @@ namespace RevitLightingPlugin.Commands
                             result.DensitePuissance = result.PuissanceTotale / result.RoomArea;
                         }
 
+                        roomStopwatch.Stop();
+                        Logger.Performance($"Calcul pièce {room.Name}", roomStopwatch.Elapsed);
                         results.Add(result);
                     }
                     catch (Exception ex)
                     {
+                        Logger.Error("LightingAnalysisCmd", $"Erreur calcul pour pièce {room.Name}", ex);
                         TaskDialog.Show("Erreur de calcul",
                             $"Erreur lors du calcul pour la pièce {room.Name} :\n{ex.Message}");
                     }
@@ -275,18 +308,32 @@ namespace RevitLightingPlugin.Commands
 
                 if (results.Count == 0)
                 {
+                    Logger.Warning("LightingAnalysisCmd", "Aucun résultat de calcul disponible");
                     TaskDialog.Show("Attention", "Aucun résultat de calcul disponible.");
+                    Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Failed");
                     return Result.Failed;
                 }
 
-                // Afficher les résultats - CORRECTION ICI !
+                // Afficher les résultats
+                Logger.Info("LightingAnalysisCmd", $"✅ {results.Count} résultat(s) calculé(s) avec succès");
+                Logger.Debug("LightingAnalysisCmd", "Affichage de la fenêtre de résultats");
                 var resultsWindow = new ResultsWindow(uidoc, results);
                 resultsWindow.ShowDialog();
 
+                stopwatch.Stop();
+                Logger.Performance("Analyse d'éclairement complète", stopwatch.Elapsed);
+                Logger.Info("LightingAnalysisCmd", "✅ Commande terminée avec succès");
+                Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Succeeded");
+                Logger.Separator();
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.Critical("LightingAnalysisCmd", "Erreur critique dans la commande d'analyse", ex);
+                Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Failed");
+                Logger.Separator();
+
                 message = ex.Message;
                 TaskDialog.Show("Erreur", $"Une erreur s'est produite :\n{ex.Message}");
                 return Result.Failed;
