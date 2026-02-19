@@ -146,6 +146,7 @@
     <Compile Include="Models\LuminaireInfo.cs" />
     <Compile Include="Models\PhotometricData.cs" />
     <Compile Include="UI\LightingAnalysisWindow.cs" />
+    <Compile Include="UI\LoadingWindow.cs" />
     <Compile Include="UI\LuminaireCatalogWindow.cs" />
     <Compile Include="UI\ReportConfigWindow.cs" />
     <Compile Include="UI\ReportInfoDialog.cs" />

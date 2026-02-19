@@ -1,6 +1,8 @@
 using System;
 using Autodesk.Revit.UI;
 using System.Reflection;
+using System.Windows.Media.Imaging;
+using System.IO;
 using RevitLightingPlugin.Core;
 
 namespace RevitLightingPlugin
@@ -21,8 +23,8 @@ namespace RevitLightingPlugin
 
             try
             {
-                // Créer onglet personnalisé "Éclairage"
-                string tabName = "Éclairage";
+                // Créer onglet personnalisé "SlyLight"
+                string tabName = "SlyLight";
                 try
                 {
                     application.CreateRibbonTab(tabName);
@@ -34,8 +36,8 @@ namespace RevitLightingPlugin
                     Logger.Warning("Application", $"Onglet '{tabName}' existe déjà");
                 }
 
-                // Créer panneau "Analyse"
-                RibbonPanel panel = application.CreateRibbonPanel(tabName, "Analyse");
+                // Créer panneau "initium"
+                RibbonPanel panel = application.CreateRibbonPanel(tabName, "initium");
                 Logger.Info("Application", "Panneau 'Analyse' créé");
 
                 // Chemin vers notre DLL
@@ -52,47 +54,43 @@ namespace RevitLightingPlugin
                 buttonAnalyzeData.ToolTip = "Analyse l'éclairement des pièces sélectionnées";
                 buttonAnalyzeData.LongDescription = "Ouvre une interface pour sélectionner les pièces à analyser et calcule l'éclairement selon les normes EN 12464-1.";
 
+                // Icône du bouton
+                string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo Bouton Analyse V5b.png";
+                if (File.Exists(logoPath))
+                {
+                    try
+                    {
+                        // LargeImage : 32x32 standard Revit
+                        BitmapImage bmpLarge = new BitmapImage();
+                        bmpLarge.BeginInit();
+                        bmpLarge.UriSource = new Uri(logoPath);
+                        bmpLarge.CacheOption = BitmapCacheOption.OnLoad;
+                        bmpLarge.EndInit();
+                        bmpLarge.Freeze();
+
+                        // Image : 16x16 (petit bouton Revit)
+                        BitmapImage bmpSmall = new BitmapImage();
+                        bmpSmall.BeginInit();
+                        bmpSmall.UriSource = new Uri(logoPath);
+                        bmpSmall.DecodePixelWidth = 16;
+                        bmpSmall.DecodePixelHeight = 16;
+                        bmpSmall.CacheOption = BitmapCacheOption.OnLoad;
+                        bmpSmall.EndInit();
+                        bmpSmall.Freeze();
+
+                        buttonAnalyzeData.LargeImage = bmpLarge;
+                        buttonAnalyzeData.Image = bmpSmall;
+                        Logger.Debug("Application", "Icône bouton chargée");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning("Application", $"Icône non chargée : {ex.Message}");
+                    }
+                }
+
                 PushButton buttonAnalyze = panel.AddItem(buttonAnalyzeData) as PushButton;
                 Logger.Info("Application", "Bouton 'Analyse Éclairement' ajouté");
 
-                // BOUTON 2 : Catalogue de luminaires
-                PushButtonData buttonCatalogData = new PushButtonData(
-                    "LuminaireCatalog",
-                    "Catalogue\nLuminaires",
-                    assemblyPath,
-                    "RevitLightingPlugin.Commands.ManageLuminairesCommand"
-                );
-                buttonCatalogData.ToolTip = "Gérer le catalogue de luminaires";
-                buttonCatalogData.LongDescription = "Ouvre le catalogue de luminaires pour ajouter, modifier ou supprimer des luminaires, et importer des fichiers IES.";
-
-                PushButton buttonCatalog = panel.AddItem(buttonCatalogData) as PushButton;
-                Logger.Info("Application", "Bouton 'Catalogue Luminaires' ajouté");
-
-                // BOUTON 3 : Test Parser IES (Phase 2)
-                PushButtonData buttonTestIESData = new PushButtonData(
-                    "TestIESParser",
-                    "Test\nParser IES",
-                    assemblyPath,
-                    "RevitLightingPlugin.Commands.TestIESParserCommand"
-                );
-                buttonTestIESData.ToolTip = "Tester le parser IES";
-                buttonTestIESData.LongDescription = "Ouvre un fichier IES et affiche toutes les données extraites (flux, puissance, fabricant, courbe photométrique, etc.)";
-
-                PushButton buttonTestIES = panel.AddItem(buttonTestIESData) as PushButton;
-                Logger.Info("Application", "Bouton 'Test Parser IES' ajouté");
-
-                // BOUTON 4 : Diagnostic Luminaire
-                PushButtonData buttonDiagnosticData = new PushButtonData(
-                    "DiagnosticLuminaire",
-                    "Diagnostic\nLuminaire",
-                    assemblyPath,
-                    "RevitLightingPlugin.Commands.DiagnosticLuminaireCommand"
-                );
-                buttonDiagnosticData.ToolTip = "Diagnostiquer un luminaire";
-                buttonDiagnosticData.LongDescription = "Sélectionnez un luminaire pour voir toutes ses propriétés : position, dimensions, paramètres, fichier IES, etc.";
-
-                PushButton buttonDiagnostic = panel.AddItem(buttonDiagnosticData) as PushButton;
-                Logger.Info("Application", "Bouton 'Diagnostic Luminaire' ajouté");
 
                 Logger.Info("Application", "✅ Plugin démarré avec succès");
                 Logger.ExitMethod("Application", "OnStartup", "Result.Succeeded");

@@ -65,8 +65,14 @@ namespace RevitLightingPlugin.Commands
                 double maintenanceFactor = analysisWindow.MaintenanceFactor;
                 Logger.Info("LightingAnalysisCmd", $"Paramètres: GridSpacing={settings.GridSpacing}m, Heights={string.Join(",", settings.WorkPlaneHeights)}m, MF={maintenanceFactor:F2}");
 
+                // Afficher la fenêtre de chargement animée
+                var loadingWindow = LoadingWindow.ShowLoading();
+
+                try
+                {
                 // Effectuer les calculs
                 Logger.Info("LightingAnalysisCmd", "Initialisation du calculateur d'éclairement");
+                loadingWindow?.SetStatus("Initialisation du calculateur...");
                 var calculator = new LightingCalculator(doc);
                 var results = new List<CalculationResult>();
 
@@ -78,9 +84,11 @@ namespace RevitLightingPlugin.Commands
 
                 // Exporter vues pour chaque pièce
                 Logger.Info("LightingAnalysisCmd", "Export des vues 2D/3D des pièces");
+                loadingWindow?.SetStatus("Export des vues 2D/3D...");
                 foreach (var room in selectedRooms)
                 {
                     Logger.Debug("LightingAnalysisCmd", $"Export vues pour pièce: {room.Name}");
+                    loadingWindow?.SetStatus($"Export vue : {room.Name}");
                     var viewExport = viewExporter.ExportRoomViews(room);
                     roomViewExports[room.Id] = viewExport;
                 }
@@ -88,11 +96,13 @@ namespace RevitLightingPlugin.Commands
                 // Effectuer les calculs
                 Logger.Separator("CALCULS D'ÉCLAIREMENT");
                 Logger.Info("LightingAnalysisCmd", $"Début des calculs pour {selectedRooms.Count} pièce(s)");
+                loadingWindow?.SetStatus("Calcul photométrique en cours...");
 
                 foreach (var room in selectedRooms)
                 {
                     var roomStopwatch = Stopwatch.StartNew();
                     Logger.Info("LightingAnalysisCmd", $"📊 Calcul pour pièce: {room.Name} ({room.Number})");
+                    loadingWindow?.SetStatus($"Analyse : {room.Name}");
 
                     try
                     {
@@ -309,11 +319,17 @@ namespace RevitLightingPlugin.Commands
 
                 if (results.Count == 0)
                 {
+                    LoadingWindow.CloseInstance();
                     Logger.Warning("LightingAnalysisCmd", "Aucun résultat de calcul disponible");
                     TaskDialog.Show("Attention", "Aucun résultat de calcul disponible.");
                     Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Failed");
                     return Result.Failed;
                 }
+
+                // Fermer la fenêtre de chargement avant d'afficher les résultats
+                loadingWindow?.SetStatus("Génération du rapport...");
+                System.Threading.Thread.Sleep(400); // Laisser le temps de voir le message
+                LoadingWindow.CloseInstance();
 
                 // Afficher les résultats
                 Logger.Info("LightingAnalysisCmd", $"✅ {results.Count} résultat(s) calculé(s) avec succès");
@@ -327,10 +343,16 @@ namespace RevitLightingPlugin.Commands
                 Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Succeeded");
                 Logger.Separator();
                 return Result.Succeeded;
+                } // fin try loading
+                finally
+                {
+                    LoadingWindow.CloseInstance();
+                }
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
+                LoadingWindow.CloseInstance();
                 Logger.Critical("LightingAnalysisCmd", "Erreur critique dans la commande d'analyse", ex);
                 Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Failed");
                 Logger.Separator();
