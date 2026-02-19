@@ -16,6 +16,7 @@ namespace RevitLightingPlugin.Core
         private readonly Document _doc;
         private static bool _logFileInitialized = false; // Pour nettoyer le fichier une seule fois
         private static readonly string DebugLogPath = Path.Combine(Path.GetTempPath(), "RevitLightingPlugin_Debug.log");
+        private double _calculatedLuminaireHeightMeters = 0; // Hauteur moyenne des luminaires (stockée temporairement)
 
         public LightingCalculator(Document doc)
         {
@@ -109,6 +110,9 @@ namespace RevitLightingPlugin.Core
             Logger.Debug("LightingCalculator", "  Calcul de la grille d'éclairement...");
             result.GridPoints = CalculateGridIlluminance(room, luminaires, result.Luminaires, gridSpacingFeet, workplaneHeightFeet, settings);
 
+            // Stocker la hauteur calculée des luminaires
+            result.LuminaireCalculatedHeightMeters = _calculatedLuminaireHeightMeters;
+
             if (result.GridPoints.Count > 0)
             {
                 result.AverageIlluminance = result.GridPoints.Average(p => p.Illuminance);
@@ -179,6 +183,9 @@ namespace RevitLightingPlugin.Core
             LogDebug($"");
             LogDebug($"--- Début calcul grille ---");
 
+            // Stocker les hauteurs calculées des luminaires pour calcul de moyenne
+            List<double> luminaireHeightsMeters = new List<double>();
+
             for (double x = bbox.Min.X; x <= bbox.Max.X; x += gridSpacingFeet)
             {
                 for (double y = bbox.Min.Y; y <= bbox.Max.Y; y += gridSpacingFeet)
@@ -204,20 +211,30 @@ namespace RevitLightingPlugin.Core
                         BoundingBoxXYZ lumBbox = luminaire.get_BoundingBox(null);
                         if (lumBbox != null)
                         {
-                            // 🚨 CORRECTION : Pour luminaire suspendu/plafonnier : Max.Z = HAUT (source lumineuse)
-                            // Max.Z = point le plus haut = fixation au plafond = position source
-                            double realZ = lumBbox.Max.Z;
+                            // 🎯 CORRECTION FINALE (16/02/2026) : Détection automatique position source
+                            // - Luminaire ÉPAIS (>30cm) : Centre BBox (ex: R924.01 suspendu → 1.72m)
+                            // - Luminaire PLAT (≤30cm) : Max.Z (ex: plafonnier encastré)
+                            bool isFirstPoint = (i == 0 && gridPoints.Count == 0);
+                            double realZ = GetLightSourceHeight(luminaire, lumBbox, isFirstPoint);
+
+                            // Stocker la hauteur pour calcul de moyenne (seulement au premier point de grille)
+                            if (gridPoints.Count == 0)
+                            {
+                                luminaireHeightsMeters.Add(realZ * 0.3048); // Convertir en mètres
+                            }
 
                             // Logs géométriques pour diagnostic (premier luminaire + premier point seulement)
                             if (i == 0 && gridPoints.Count == 0)
                             {
                                 XYZ origLoc = (luminaire.Location as LocationPoint)?.Point;
                                 double dHoriz = Math.Sqrt(Math.Pow(lumLocation.X - x, 2) + Math.Pow(lumLocation.Y - y, 2));
+                                double bboxHeight = lumBbox.Max.Z - lumBbox.Min.Z;
                                 LogDebug($"");
                                 LogDebug($"=== GÉOMÉTRIE : LUMINAIRE #1 vs POINT #1 ===");
                                 LogDebug($"[GEOM] Point grille #1: X={x:F3} ft ({x * 0.3048:F2} m), Y={y:F3} ft ({y * 0.3048:F2} m)");
                                 LogDebug($"[GEOM] Luminaire #1 insertion: X={origLoc?.X:F3} ft ({(origLoc?.X ?? 0) * 0.3048:F2} m), Y={origLoc?.Y:F3} ft ({(origLoc?.Y ?? 0) * 0.3048:F2} m), Z={origLoc?.Z:F3} ft ({(origLoc?.Z ?? 0) * 0.3048:F2} m)");
-                                LogDebug($"[GEOM] BBox luminaire: Min.Z={lumBbox.Min.Z:F3} ft ({lumBbox.Min.Z * 0.3048:F2} m), Max.Z={realZ:F3} ft ({realZ * 0.3048:F2} m)");
+                                LogDebug($"[GEOM] BBox luminaire: Min.Z={lumBbox.Min.Z:F3} ft ({lumBbox.Min.Z * 0.3048:F2} m), Max.Z={lumBbox.Max.Z:F3} ft ({lumBbox.Max.Z * 0.3048:F2} m), Hauteur={bboxHeight:F3} ft ({bboxHeight * 0.3048:F2} m)");
+                                LogDebug($"[GEOM] ✅ SOURCE CALCULÉE: Z={realZ:F3} ft ({realZ * 0.3048:F2} m) ← Position utilisée pour calculs");
                                 LogDebug($"[GEOM] Plan de travail (testPoint.Z): {testPoint.Z:F3} ft ({testPoint.Z * 0.3048:F2} m)");
                                 LogDebug($"[GEOM] Hauteur utile h = {Math.Abs(realZ - testPoint.Z):F3} ft = {Math.Abs(realZ - testPoint.Z) * 0.3048:F2} m");
                                 LogDebug($"[GEOM] Distance horizontale = {dHoriz:F3} ft = {dHoriz * 0.3048:F2} m");
@@ -329,6 +346,13 @@ namespace RevitLightingPlugin.Core
                 LogDebug($"[RESULT] Emax: {maxE:F1} lux");
                 LogDebug($"[RESULT] Uniformité U0 = Emin/Em: {minE / avgE:F3}");
                 LogDebug($"");
+            }
+
+            // Calculer la hauteur moyenne des luminaires
+            if (luminaireHeightsMeters.Count > 0)
+            {
+                _calculatedLuminaireHeightMeters = luminaireHeightsMeters.Average();
+                LogDebug($"[HAUTEUR] Hauteur moyenne source lumineuse: {_calculatedLuminaireHeightMeters:F2} m");
             }
 
             return gridPoints;
@@ -1106,6 +1130,65 @@ namespace RevitLightingPlugin.Core
             }
 
             return defaultValue;
+        }
+
+        /// <summary>
+        /// Détermine la hauteur réelle de la source lumineuse dans un luminaire
+        /// </summary>
+        /// <param name="luminaire">Instance du luminaire</param>
+        /// <param name="lumBbox">BoundingBox du luminaire</param>
+        /// <param name="isFirstPoint">Si true, log la méthode utilisée</param>
+        /// <returns>Position Z de la source lumineuse</returns>
+        private double GetLightSourceHeight(FamilyInstance luminaire, BoundingBoxXYZ lumBbox, bool isFirstPoint)
+        {
+            // NIVEAU 1 : Chercher un paramètre explicite "Light Source Height"
+            Parameter lightSourceParam = luminaire.LookupParameter("Light Source Height");
+            if (lightSourceParam != null && lightSourceParam.HasValue)
+            {
+                double explicitHeight = lightSourceParam.AsDouble();
+                if (isFirstPoint)
+                {
+                    LogDebug($"[SOURCE] Méthode : Paramètre explicite 'Light Source Height' = {explicitHeight:F3} ft ({explicitHeight * 0.3048:F2} m)");
+                }
+                return explicitHeight;
+            }
+
+            // NIVEAU 2 : Chercher un offset depuis le haut "Light Source Offset"
+            Parameter offsetParam = luminaire.LookupParameter("Light Source Offset");
+            if (offsetParam != null && offsetParam.HasValue)
+            {
+                double offset = offsetParam.AsDouble();
+                double height = lumBbox.Max.Z - offset;
+                if (isFirstPoint)
+                {
+                    LogDebug($"[SOURCE] Méthode : Offset depuis Max.Z ({lumBbox.Max.Z * 0.3048:F2}m - {offset * 0.3048:F2}m) = {height * 0.3048:F2} m");
+                }
+                return height;
+            }
+
+            // NIVEAU 3 : Analyse de la géométrie BoundingBox
+            double bboxHeight = lumBbox.Max.Z - lumBbox.Min.Z;
+
+            // Si luminaire ÉPAIS (> 1.0 ft = 30cm), la source est probablement au CENTRE
+            // Exemple : Suspension R924.01 de 1.10m de haut → source LED au milieu
+            if (bboxHeight > 1.0) // Plus de 1 pied = 30 cm
+            {
+                double centerZ = (lumBbox.Min.Z + lumBbox.Max.Z) / 2.0;
+                if (isFirstPoint)
+                {
+                    LogDebug($"[SOURCE] Méthode : CENTRE BBox (luminaire épais {bboxHeight * 0.3048:F2}m > 0.30m)");
+                    LogDebug($"[SOURCE] Centre Z = (Min.Z + Max.Z) / 2 = ({lumBbox.Min.Z * 0.3048:F2}m + {lumBbox.Max.Z * 0.3048:F2}m) / 2 = {centerZ * 0.3048:F2} m");
+                }
+                return centerZ;
+            }
+
+            // NIVEAU 4 : Luminaire PLAT ou ENCASTRÉ → source au Max.Z (haut/plafond)
+            if (isFirstPoint)
+            {
+                LogDebug($"[SOURCE] Méthode : MAX.Z (luminaire plat {bboxHeight * 0.3048:F2}m ≤ 0.30m)");
+                LogDebug($"[SOURCE] Max.Z = {lumBbox.Max.Z * 0.3048:F2} m (haut du luminaire = source)");
+            }
+            return lumBbox.Max.Z;
         }
 
         private double CalculateAverageIlluminance(double totalLumens, double roomArea)

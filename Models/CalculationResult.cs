@@ -127,6 +127,9 @@ namespace RevitLightingPlugin.Models
         // Liste des luminaires utilisés dans cette pièce
         public List<LuminaireUsageInfo> LuminairesUtilises { get; set; }
 
+        // Hauteur calculée de la source lumineuse (en mètres)
+        public double LuminaireCalculatedHeightMeters { get; set; }
+
         // NOUVEAU : Résultats par hauteur de plan de travail
         public List<HeightAnalysisResult> HeightResults { get; set; }
 
@@ -155,6 +158,7 @@ namespace RevitLightingPlugin.Models
         public string Fabricant { get; set; }
         public int TemperatureCouleur { get; set; }
         public string Reference { get; set; }
+        public double CalculatedHeightMeters { get; set; }
 
         // NOUVEAU : Propriété pour le flux total
         public double TotalFlux

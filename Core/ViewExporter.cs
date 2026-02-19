@@ -59,6 +59,7 @@ namespace RevitLightingPlugin.Core
 
         private string ExportPlanView(Room room)
         {
+            Logger.Debug("ViewExporter", $"ExportPlanView START: {room.Name}");
             try
             {
                 using (Transaction trans = new Transaction(_doc, "Export Plan View"))
@@ -72,6 +73,7 @@ namespace RevitLightingPlugin.Core
                         return null;
                     }
 
+                    // Chercher une vue sur le niveau de la pièce
                     ViewPlan planView = new FilteredElementCollector(_doc)
                         .OfClass(typeof(ViewPlan))
                         .Cast<ViewPlan>()
@@ -92,9 +94,12 @@ namespace RevitLightingPlugin.Core
 
                     if (planView == null)
                     {
+                        Logger.Warning("ViewExporter", $"Aucune vue en plan trouvée pour {room.Name}");
                         trans.RollBack();
                         return null;
                     }
+
+                    Logger.Debug("ViewExporter", $"Vue trouvée: {planView.Name}");
 
                     // Cadrer la vue sur la pièce
                     BoundingBoxXYZ bbox = room.get_BoundingBox(planView);
@@ -111,6 +116,13 @@ namespace RevitLightingPlugin.Core
 
                     // Afficher les luminaires
                     SetCategoryVisible(planView, BuiltInCategory.OST_LightingFixtures, true);
+
+                    // Configuration affichage : Réaliste + Détail élevé + Photométries
+                    planView.DisplayStyle = DisplayStyle.Realistic;
+                    planView.DetailLevel = ViewDetailLevel.Fine;
+
+                    // Activer l'affichage des photométries (surfaces d'éclairage)
+                    planView.SetCategoryHidden(new ElementId(BuiltInCategory.OST_LightingFixtureSource), false);
 
                     trans.Commit();
 
@@ -131,24 +143,33 @@ namespace RevitLightingPlugin.Core
                     options.SetViewsAndSheets(new List<ElementId> { planView.Id });
                     _doc.ExportImage(options);
 
-                    string[] possiblePaths = Directory.GetFiles(_exportFolder, $"*{room.Id.Value}*.png");
+                    Logger.Debug("ViewExporter", $"Export terminé, recherche fichiers dans: {_exportFolder}");
+
+                    // Revit crée les fichiers en JPG ou PNG selon le mode d'affichage
+                    string[] possiblePaths = Directory.GetFiles(_exportFolder, $"Plan_{room.Id.Value}_*")
+                        .OrderByDescending(f => File.GetCreationTime(f)).ToArray();
+                    Logger.Debug("ViewExporter", $"Fichiers trouvés: {possiblePaths.Length}");
+
                     if (possiblePaths.Length > 0)
                     {
+                        Logger.Info("ViewExporter", $"✅ Vue en plan exportée: {possiblePaths[0]}");
                         return possiblePaths[0];
                     }
 
-                    return File.Exists(imagePath) ? imagePath : null;
+                    Logger.Warning("ViewExporter", $"❌ Aucun fichier trouvé pour {room.Name}");
+                    return null;
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Erreur export plan : {ex.Message}");
+                Logger.Error("ViewExporter", $"Erreur export plan pour {room.Name}: {ex.Message}", ex);
                 return null;
             }
         }
 
         private string Export3DView(Room room)
         {
+            Logger.Debug("ViewExporter", $"Export3DView START: {room.Name}");
             try
             {
                 using (Transaction trans = new Transaction(_doc, "Export 3D View"))
@@ -189,6 +210,13 @@ namespace RevitLightingPlugin.Core
                     // Afficher les luminaires
                     SetCategoryVisible(view3D, BuiltInCategory.OST_LightingFixtures, true);
 
+                    // Configuration affichage : Réaliste + Détail élevé + Photométries
+                    view3D.DisplayStyle = DisplayStyle.Realistic;
+                    view3D.DetailLevel = ViewDetailLevel.Fine;
+
+                    // Activer l'affichage des photométries (surfaces d'éclairage)
+                    view3D.SetCategoryHidden(new ElementId(BuiltInCategory.OST_LightingFixtureSource), false);
+
                     ElementId view3DId = view3D.Id;
                     trans.Commit();
 
@@ -217,13 +245,16 @@ namespace RevitLightingPlugin.Core
                         delTrans.Commit();
                     }
 
-                    string[] possiblePaths = Directory.GetFiles(_exportFolder, $"*{room.Id.Value}*.png")
+                    string[] possiblePaths = Directory.GetFiles(_exportFolder, $"3D_{room.Id.Value}_*")
                         .OrderByDescending(f => File.GetCreationTime(f)).ToArray();
 
                     if (possiblePaths.Length > 0)
                     {
+                        Logger.Info("ViewExporter", $"✅ Vue 3D exportée: {possiblePaths[0]}");
                         return possiblePaths[0];
                     }
+
+                    Logger.Warning("ViewExporter", $"❌ Aucun fichier 3D trouvé pour {room.Name}");
 
                     return File.Exists(imagePath) ? imagePath : null;
                 }

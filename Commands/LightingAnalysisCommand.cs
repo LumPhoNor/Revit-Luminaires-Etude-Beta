@@ -234,36 +234,37 @@ namespace RevitLightingPlugin.Commands
                             result.UniformiteRequise = activityType.UniformityMin;
                             result.TypeActivite = activityType.DisplayName;
 
-                            // Vérifier la conformité selon le type d'activité
-                            result.MeetsStandard = result.AverageIlluminance >= activityType.RequiredLux &&
-                                                  result.Uniformity >= activityType.UniformityMin;
+                            // Vérifier la conformité : basée UNIQUEMENT sur l'éclairement moyen
+                            result.MeetsStandard = result.AverageIlluminance >= activityType.RequiredLux;
 
                             // Générer des recommandations personnalisées
-                            if (!result.MeetsStandard)
+                            var recommendations = new List<string>();
+                            bool illuminanceOk = result.AverageIlluminance >= activityType.RequiredLux;
+                            bool uniformityOk = result.Uniformity >= activityType.UniformityMin;
+
+                            if (!illuminanceOk)
                             {
-                                var recommendations = new List<string>();
+                                double deficit = activityType.RequiredLux - result.AverageIlluminance;
+                                double percentageDeficit = (deficit / activityType.RequiredLux) * 100;
+                                recommendations.Add($"Éclairement insuffisant : {result.AverageIlluminance:F0} lux au lieu de {activityType.RequiredLux} lux requis (déficit de {percentageDeficit:F0}%)");
 
-                                if (result.AverageIlluminance < activityType.RequiredLux)
+                                // Suggestion de nombre de luminaires à ajouter
+                                if (result.LuminaireCount > 0 && result.AverageIlluminance > 0)
                                 {
-                                    double deficit = activityType.RequiredLux - result.AverageIlluminance;
-                                    double percentageDeficit = (deficit / activityType.RequiredLux) * 100;
-                                    recommendations.Add($"Éclairement insuffisant : {result.AverageIlluminance:F0} lux au lieu de {activityType.RequiredLux} lux requis (déficit de {percentageDeficit:F0}%)");
-
-                                    // Suggestion de nombre de luminaires à ajouter
-                                    if (result.LuminaireCount > 0 && result.AverageIlluminance > 0)
-                                    {
-                                        double ratio = activityType.RequiredLux / result.AverageIlluminance;
-                                        int additionalLuminaires = (int)Math.Ceiling(result.LuminaireCount * (ratio - 1));
-                                        recommendations.Add($"Suggestion : ajouter environ {additionalLuminaires} luminaire(s) similaire(s)");
-                                    }
+                                    double ratio = activityType.RequiredLux / result.AverageIlluminance;
+                                    int additionalLuminaires = (int)Math.Ceiling(result.LuminaireCount * (ratio - 1));
+                                    recommendations.Add($"Suggestion : ajouter environ {additionalLuminaires} luminaire(s) similaire(s)");
                                 }
+                            }
 
-                                if (result.Uniformity < activityType.UniformityMin)
-                                {
-                                    recommendations.Add($"Uniformité insuffisante : {result.Uniformity:F2} au lieu de {activityType.UniformityMin:F2} minimum");
-                                    recommendations.Add("Suggestion : mieux répartir les luminaires dans l'espace");
-                                }
+                            if (!uniformityOk)
+                            {
+                                recommendations.Add($"Note : Uniformité à améliorer : {result.Uniformity:F2} au lieu de {activityType.UniformityMin:F2} minimum");
+                                recommendations.Add("Suggestion : mieux répartir les luminaires dans l'espace");
+                            }
 
+                            if (recommendations.Count > 0)
+                            {
                                 result.Remarques = string.Join("\n", recommendations);
                             }
                             else

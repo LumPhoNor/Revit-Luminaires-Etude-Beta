@@ -21,6 +21,7 @@ namespace RevitLightingPlugin.Core
         public double MinIlluminance { get; set; }
         public double MaxIlluminance { get; set; }
         public double WorkPlaneHeight { get; set; }
+        public double LuminaireCalculatedHeightMeters { get; set; }
 
         public LightingResult()
         {

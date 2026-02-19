@@ -81,6 +81,19 @@ namespace RevitLightingPlugin
                 PushButton buttonTestIES = panel.AddItem(buttonTestIESData) as PushButton;
                 Logger.Info("Application", "Bouton 'Test Parser IES' ajouté");
 
+                // BOUTON 4 : Diagnostic Luminaire
+                PushButtonData buttonDiagnosticData = new PushButtonData(
+                    "DiagnosticLuminaire",
+                    "Diagnostic\nLuminaire",
+                    assemblyPath,
+                    "RevitLightingPlugin.Commands.DiagnosticLuminaireCommand"
+                );
+                buttonDiagnosticData.ToolTip = "Diagnostiquer un luminaire";
+                buttonDiagnosticData.LongDescription = "Sélectionnez un luminaire pour voir toutes ses propriétés : position, dimensions, paramètres, fichier IES, etc.";
+
+                PushButton buttonDiagnostic = panel.AddItem(buttonDiagnosticData) as PushButton;
+                Logger.Info("Application", "Bouton 'Diagnostic Luminaire' ajouté");
+
                 Logger.Info("Application", "✅ Plugin démarré avec succès");
                 Logger.ExitMethod("Application", "OnStartup", "Result.Succeeded");
                 Logger.Separator();

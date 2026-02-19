@@ -46,7 +46,7 @@ namespace RevitLightingPlugin.Core
 
                 // Dimensions de base
                 int margin = 60;
-                int legendWidth = 220;
+                int legendWidth = 280;  // Augmenté de 220 à 280 pour texte plus gros
                 int titleHeight = 80; // Espace pour titre et stats
 
                 // Dimensions maximales disponibles
@@ -265,17 +265,17 @@ namespace RevitLightingPlugin.Core
         /// </summary>
         private static void DrawGradientLegend(Graphics g, double requiredLux, int drawWidth, int height)
         {
-            int legendX = drawWidth + 20;
+            int legendX = drawWidth + 50;  // Augmenté de 20 à 50 pour meilleur espacement
             int legendY = 100;
-            int barWidth = 25;
+            int barWidth = 30;  // Augmenté de 25 à 30 pour barre plus visible
             int barHeight = 200;
 
             // Titre de la légende
-            using (Font titleFont = new Font("Arial", 10, FontStyle.Bold))
+            using (Font titleFont = new Font("Arial", 12, FontStyle.Bold))  // Augmenté de 10 à 12
             using (SolidBrush textBrush = new SolidBrush(System.Drawing.Color.Black))
             {
-                g.DrawString("Éclairement", titleFont, textBrush, legendX, legendY - 25);
-                g.DrawString("(lux)", titleFont, textBrush, legendX, legendY - 10);
+                g.DrawString("Éclairement", titleFont, textBrush, legendX, legendY - 30);
+                g.DrawString("(lux)", titleFont, textBrush, legendX, legendY - 12);
             }
 
             // Dessiner la barre de gradient verticale
@@ -301,7 +301,7 @@ namespace RevitLightingPlugin.Core
             }
 
             // Étiquettes et marques de graduation
-            using (Font font = new Font("Arial", 8))
+            using (Font font = new Font("Arial", 10, FontStyle.Regular))  // Augmenté de 8 à 10
             using (SolidBrush textBrush = new SolidBrush(System.Drawing.Color.Black))
             using (Pen tickPen = new Pen(System.Drawing.Color.Black, 2))
             {
@@ -322,12 +322,12 @@ namespace RevitLightingPlugin.Core
                     int y = legendY + (int)((1.0 - ratio / 2.0) * barHeight);
 
                     // Marque de graduation
-                    g.DrawLine(tickPen, legendX + barWidth, y, legendX + barWidth + 5, y);
+                    g.DrawLine(tickPen, legendX + barWidth, y, legendX + barWidth + 8, y);  // Augmenté de 5 à 8
 
                     // Texte avec pourcentage et valeur lux
                     string label = $"{percent} ({luxLabel})";
                     SizeF textSize = g.MeasureString(label, font);
-                    g.DrawString(label, font, textBrush, legendX + barWidth + 8, y - textSize.Height / 2);
+                    g.DrawString(label, font, textBrush, legendX + barWidth + 15, y - textSize.Height / 2);  // Augmenté de 8 à 15
 
                     // Ligne de référence pour 100% (requis)
                     if (Math.Abs(ratio - 1.0) < 0.01)

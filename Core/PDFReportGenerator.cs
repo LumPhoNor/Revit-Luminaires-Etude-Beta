@@ -286,7 +286,7 @@ namespace RevitLightingPlugin.Core
                 {
                     iTextSharp.text.Image gridImg = iTextSharp.text.Image.GetInstance(result.GridMapPath);
                     // Dimensions maximales pour une page A4 (520x720 pour garder des marges)
-                    gridImg.ScaleToFit(520f, 720f);
+                    gridImg.ScaleToFit(520f, 600f);
                     gridImg.Alignment = PdfElement.ALIGN_CENTER;
                     pdfDocument.Add(gridImg);
                 }
@@ -326,7 +326,7 @@ namespace RevitLightingPlugin.Core
                 {
                     iTextSharp.text.Image heatmapImg = iTextSharp.text.Image.GetInstance(heatmap3DPath);
                     // Dimensions maximales pour une page A4 (520x720 pour garder des marges)
-                    heatmapImg.ScaleToFit(520f, 720f);
+                    heatmapImg.ScaleToFit(520f, 600f);
                     heatmapImg.Alignment = PdfElement.ALIGN_CENTER;
                     pdfDocument.Add(heatmapImg);
                 }
@@ -350,6 +350,10 @@ namespace RevitLightingPlugin.Core
             ct.SetWidths(new float[] { 3f, 2f });
             AddSummaryRow(ct, "Surface", $"{result.RoomArea:F2} m²");
             AddSummaryRow(ct, "Hauteur sous plafond", $"{result.HauteurPiece:F2} m");
+            if (result.LuminaireCalculatedHeightMeters > 0)
+            {
+                AddSummaryRow(ct, "Hauteur source lumineuse", $"{result.LuminaireCalculatedHeightMeters:F2} m");
+            }
             AddSummaryRow(ct, "Norme appliquée", $"{result.TypeActivite} - {result.EclairementRequis:F0} lux");
             pdfDocument.Add(ct);
             pdfDocument.Add(new Paragraph("\n"));
@@ -393,7 +397,7 @@ namespace RevitLightingPlugin.Core
                             AddSectionTitle($"GRILLE 2D - Hauteur {heightResult.WorkPlaneHeight:F2} m");
                             pdfDocument.Add(new Paragraph($"{result.RoomName}\n\n", normalFont));
                             iTextSharp.text.Image hGridImg = iTextSharp.text.Image.GetInstance(heightResult.GridMapPath);
-                            hGridImg.ScaleToFit(520f, 720f);
+                            hGridImg.ScaleToFit(520f, 600f);
                             hGridImg.Alignment = PdfElement.ALIGN_CENTER;
                             pdfDocument.Add(hGridImg);
                         }
@@ -409,7 +413,7 @@ namespace RevitLightingPlugin.Core
                             AddSectionTitle($"HEATMAP 3D - Hauteur {heightResult.WorkPlaneHeight:F2} m");
                             pdfDocument.Add(new Paragraph($"{result.RoomName}\n\n", normalFont));
                             iTextSharp.text.Image heatmap3DImg = iTextSharp.text.Image.GetInstance(heightResult.Heatmap3DPath);
-                            heatmap3DImg.ScaleToFit(520f, 720f);
+                            heatmap3DImg.ScaleToFit(520f, 600f);
                             heatmap3DImg.Alignment = PdfElement.ALIGN_CENTER;
                             pdfDocument.Add(heatmap3DImg);
                         }
@@ -452,29 +456,46 @@ namespace RevitLightingPlugin.Core
         {
             try
             {
-                PdfPTable vt = new PdfPTable(2) { WidthPercentage = 100 };
+                // VUE EN PLAN - Page complète
+                AddSubsectionTitle("Vue en plan");
+                pdfDocument.Add(new Paragraph($"Affichage réaliste avec photométries - {result.RoomName}\n\n", normalFont));
 
-                PdfPCell pvc = new PdfPCell();
-                pvc.AddElement(new Paragraph("Vue en plan", boldFont) { Alignment = PdfElement.ALIGN_CENTER });
                 if (!string.IsNullOrEmpty(result.PlanImagePath) && File.Exists(result.PlanImagePath))
                 {
-                    try { iTextSharp.text.Image pi = iTextSharp.text.Image.GetInstance(result.PlanImagePath); pi.ScaleToFit(250f, 250f); pi.Alignment = PdfElement.ALIGN_CENTER; pvc.AddElement(pi); }
-                    catch { pvc.AddElement(new Paragraph("Erreur chargement", italicFont) { Alignment = PdfElement.ALIGN_CENTER }); }
+                    try
+                    {
+                        iTextSharp.text.Image planImg = iTextSharp.text.Image.GetInstance(result.PlanImagePath);
+                        planImg.ScaleToFit(520f, 600f);
+                        planImg.Alignment = PdfElement.ALIGN_CENTER;
+                        pdfDocument.Add(planImg);
+                    }
+                    catch { pdfDocument.Add(new Paragraph("Erreur chargement vue en plan", italicFont)); }
                 }
-                else pvc.AddElement(new Paragraph("Vue non générée", italicFont) { Alignment = PdfElement.ALIGN_CENTER });
-                vt.AddCell(pvc);
+                else
+                {
+                    pdfDocument.Add(new Paragraph("Vue en plan non générée", italicFont));
+                }
 
-                PdfPCell v3c = new PdfPCell();
-                v3c.AddElement(new Paragraph("Vue 3D", boldFont) { Alignment = PdfElement.ALIGN_CENTER });
+                // VUE 3D - Nouvelle page
+                pdfDocument.NewPage();
+                AddSubsectionTitle("Vue 3D");
+                pdfDocument.Add(new Paragraph($"Affichage réaliste avec photométries - {result.RoomName}\n\n", normalFont));
+
                 if (!string.IsNullOrEmpty(result.View3DImagePath) && File.Exists(result.View3DImagePath))
                 {
-                    try { iTextSharp.text.Image v3i = iTextSharp.text.Image.GetInstance(result.View3DImagePath); v3i.ScaleToFit(250f, 250f); v3i.Alignment = PdfElement.ALIGN_CENTER; v3c.AddElement(v3i); }
-                    catch { v3c.AddElement(new Paragraph("Erreur chargement", italicFont) { Alignment = PdfElement.ALIGN_CENTER }); }
+                    try
+                    {
+                        iTextSharp.text.Image view3DImg = iTextSharp.text.Image.GetInstance(result.View3DImagePath);
+                        view3DImg.ScaleToFit(520f, 600f);
+                        view3DImg.Alignment = PdfElement.ALIGN_CENTER;
+                        pdfDocument.Add(view3DImg);
+                    }
+                    catch { pdfDocument.Add(new Paragraph("Erreur chargement vue 3D", italicFont)); }
                 }
-                else v3c.AddElement(new Paragraph("Vue non générée", italicFont) { Alignment = PdfElement.ALIGN_CENTER });
-                vt.AddCell(v3c);
-
-                pdfDocument.Add(vt);
+                else
+                {
+                    pdfDocument.Add(new Paragraph("Vue 3D non générée", italicFont));
+                }
             }
             catch (Exception ex) { pdfDocument.Add(new Paragraph($"Erreur vues : {ex.Message}", italicFont)); }
         }
@@ -555,18 +576,73 @@ namespace RevitLightingPlugin.Core
         {
             RecordSectionPage("TOC_RECOMMENDATIONS");
             AddSectionTitle("RECOMMANDATIONS");
-            var ncr = results.Where(r => !r.EstConforme).ToList();
-            if (ncr.Count == 0) { pdfDocument.Add(new Paragraph("Toutes les pièces sont conformes.", normalFont)); return; }
-            AddSubsectionTitle("Actions correctives");
-            pdfDocument.Add(new Paragraph("Points à corriger :\n\n", normalFont));
-            int c = 1;
-            foreach (var r in ncr)
+
+            // Séparer les pièces non conformes (éclairement insuffisant) et celles avec uniformité à améliorer
+            var nonCompliant = results.Where(r => !r.EstConforme).ToList();
+            var compliantButUniformityIssues = results.Where(r =>
+                r.EstConforme &&
+                r.Uniformity < r.UniformiteRequise).ToList();
+
+            // Si tout est parfait
+            if (nonCompliant.Count == 0 && compliantButUniformityIssues.Count == 0)
             {
-                double def = r.EclairementRequis - r.AverageIlluminance, defp = (def / r.EclairementRequis) * 100;
-                double avg = r.LuminairesUtilises.Any() ? r.LuminairesUtilises.Average(l => l.FluxLumineux) : 0;
-                int add = avg > 0 ? (int)Math.Ceiling((def * r.RoomArea) / avg) : 0;
-                pdfDocument.Add(new Paragraph($"{c}. {r.RoomName} : Éclairement insuffisant ({r.AverageIlluminance:F0} lux < {r.EclairementRequis:F0} lux, déficit {defp:F0}%). Suggestion : ajouter ~{add} luminaire(s).\n\n", normalFont));
-                c++;
+                pdfDocument.Add(new Paragraph("Toutes les pièces sont conformes aux normes EN 12464-1.", normalFont));
+                return;
+            }
+
+            // Section 1 : Pièces NON CONFORMES (éclairement insuffisant)
+            if (nonCompliant.Count > 0)
+            {
+                AddSubsectionTitle("Actions correctives prioritaires");
+                pdfDocument.Add(new Paragraph("Pièces non conformes (éclairement insuffisant) :\n\n", normalFont));
+                int c = 1;
+                foreach (var r in nonCompliant)
+                {
+                    var issues = new List<string>();
+
+                    // Vérifier éclairement
+                    if (r.AverageIlluminance < r.EclairementRequis)
+                    {
+                        double def = r.EclairementRequis - r.AverageIlluminance;
+                        double defp = (def / r.EclairementRequis) * 100;
+                        double avg = r.LuminairesUtilises.Any() ? r.LuminairesUtilises.Average(l => l.FluxLumineux) : 0;
+                        int add = avg > 0 ? (int)Math.Ceiling((def * r.RoomArea) / avg) : 0;
+                        issues.Add($"Éclairement insuffisant ({r.AverageIlluminance:F0} lux < {r.EclairementRequis:F0} lux, déficit {defp:F0}%). Suggestion : ajouter ~{add} luminaire(s)");
+                    }
+
+                    // Vérifier uniformité aussi pour ces pièces
+                    if (r.Uniformity < r.UniformiteRequise)
+                    {
+                        double defU = (r.UniformiteRequise - r.Uniformity) * 100;
+                        issues.Add($"Uniformité insuffisante ({r.Uniformity:F2} < {r.UniformiteRequise:F2}, déficit {defU:F0}%). Suggestion : mieux répartir les luminaires");
+                    }
+
+                    if (issues.Any())
+                    {
+                        pdfDocument.Add(new Paragraph($"{c}. {r.RoomName} :\n  • " + string.Join("\n  • ", issues) + "\n\n", normalFont));
+                        c++;
+                    }
+                }
+            }
+
+            // Section 2 : Pièces CONFORMES mais uniformité à améliorer
+            if (compliantButUniformityIssues.Count > 0)
+            {
+                pdfDocument.Add(new Paragraph("\n", normalFont));
+                AddSubsectionTitle("Améliorations recommandées");
+                pdfDocument.Add(new Paragraph("Pièces conformes mais avec uniformité à améliorer :\n\n", normalFont));
+                int c = 1;
+                foreach (var r in compliantButUniformityIssues)
+                {
+                    double defU = (r.UniformiteRequise - r.Uniformity) * 100;
+                    pdfDocument.Add(new Paragraph(
+                        $"{c}. {r.RoomName} :\n" +
+                        $"  • Éclairement moyen : {r.AverageIlluminance:F0} lux ✓ (conforme)\n" +
+                        $"  • Uniformité : {r.Uniformity:F2} (requis : {r.UniformiteRequise:F2})\n" +
+                        $"  • Suggestion : mieux répartir les luminaires pour améliorer l'uniformité\n\n",
+                        normalFont));
+                    c++;
+                }
             }
         }
 
