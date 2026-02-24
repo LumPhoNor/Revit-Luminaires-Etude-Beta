@@ -23,8 +23,8 @@ namespace RevitLightingPlugin
 
             try
             {
-                // Créer onglet personnalisé "SlyLight"
-                string tabName = "SlyLight";
+                // Créer onglet personnalisé "SkyLight"
+                string tabName = "SkyLight";
                 try
                 {
                     application.CreateRibbonTab(tabName);

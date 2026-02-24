@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 
@@ -68,34 +69,72 @@ namespace RevitLightingPlugin.UI
             Content = mainGrid;
         }
 
-        private StackPanel CreateHeader()
+        private Image CreateLogoImage()
         {
-            var panel = new StackPanel
+            string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo SkyLight.jpg";
+            if (System.IO.File.Exists(logoPath))
             {
-                Margin = new Thickness(15, 15, 15, 10),
-                Background = System.Windows.Media.Brushes.LightSteelBlue
-            };
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.UriSource = new Uri(logoPath);
+                bmp.DecodePixelHeight = 90;
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                return new Image
+                {
+                    Source = bmp,
+                    Height = 90,
+                    Stretch = System.Windows.Media.Stretch.Uniform,
+                    Margin = new Thickness(8),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+            }
+            return null;
+        }
 
-            var title = new TextBlock
+        private UIElement CreateHeader()
+        {
+            // En-tête : logo fond blanc à gauche + zone titre fond bleu
+            var headerDock = new DockPanel { LastChildFill = true };
+
+            // Zone logo - fond blanc
+            var logoImg = CreateLogoImage();
+            if (logoImg != null)
+            {
+                var logoBorder = new Border
+                {
+                    Background = System.Windows.Media.Brushes.White,
+                    Child = logoImg
+                };
+                DockPanel.SetDock(logoBorder, Dock.Left);
+                headerDock.Children.Add(logoBorder);
+            }
+
+            // Zone titre - fond bleu
+            var titleZone = new StackPanel
+            {
+                Background = System.Windows.Media.Brushes.LightSteelBlue,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
+            titleZone.Children.Add(new TextBlock
             {
                 Text = "📋 Sélectionnez les pièces et leur type d'activité",
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
-                Margin = new Thickness(10)
-            };
-
-            var subtitle = new TextBlock
+                Margin = new Thickness(10, 18, 10, 4),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            titleZone.Children.Add(new TextBlock
             {
                 Text = "Choisissez le type d'activité pour chaque pièce selon la norme EN 12464-1",
                 FontSize = 12,
-                Margin = new Thickness(10, 0, 10, 10),
+                Margin = new Thickness(10, 0, 10, 12),
                 Foreground = System.Windows.Media.Brushes.DarkSlateGray
-            };
+            });
+            headerDock.Children.Add(titleZone);
 
-            panel.Children.Add(title);
-            panel.Children.Add(subtitle);
-
-            return panel;
+            return headerDock;
         }
 
         private GroupBox CreateListPanel()

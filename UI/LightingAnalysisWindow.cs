@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using System.Globalization;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
@@ -60,37 +61,65 @@ namespace RevitLightingPlugin.UI
             _heightTextBoxes = new List<TextBox>();
 
             var mainGrid = new WpfGrid();
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) });
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) });
 
-            // En-tête
-            var headerPanel = new StackPanel
+            // En-tête : logo fond blanc à gauche + zone titre fond bleu
+            var headerDock = new DockPanel { LastChildFill = true };
+
+            // Zone logo - fond blanc
+            string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo SkyLight.jpg";
+            if (System.IO.File.Exists(logoPath))
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.UriSource = new Uri(logoPath);
+                bmp.DecodePixelHeight = 90;
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                var logoImg = new Image
+                {
+                    Source = bmp,
+                    Height = 90,
+                    Stretch = System.Windows.Media.Stretch.Uniform,
+                    Margin = new Thickness(8),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                var logoBorder = new Border
+                {
+                    Background = System.Windows.Media.Brushes.White,
+                    Child = logoImg
+                };
+                DockPanel.SetDock(logoBorder, Dock.Left);
+                headerDock.Children.Add(logoBorder);
+            }
+
+            // Zone titre - fond bleu
+            var titleZone = new StackPanel
             {
                 Background = System.Windows.Media.Brushes.LightSteelBlue,
-                Margin = new Thickness(0)
+                VerticalAlignment = VerticalAlignment.Stretch
             };
-
-            var titleText = new TextBlock
+            titleZone.Children.Add(new TextBlock
             {
                 Text = "💡 Analyse d'Éclairage",
                 FontSize = 20,
                 FontWeight = FontWeights.Bold,
-                Margin = new Thickness(10, 10, 10, 0)
-            };
-
-            var subtitleText = new TextBlock
+                Margin = new Thickness(10, 18, 10, 4),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            titleZone.Children.Add(new TextBlock
             {
                 Text = "Configuration des paramètres d'analyse selon EN 12464-1",
                 FontSize = 12,
-                Margin = new Thickness(10, 0, 10, 10)
-            };
+                Margin = new Thickness(10, 0, 10, 12)
+            });
+            headerDock.Children.Add(titleZone);
 
-            headerPanel.Children.Add(titleText);
-            headerPanel.Children.Add(subtitleText);
-
-            WpfGrid.SetRow(headerPanel, 0);
-            mainGrid.Children.Add(headerPanel);
+            WpfGrid.SetRow(headerDock, 0);
+            mainGrid.Children.Add(headerDock);
 
             // Formulaire
             var scrollViewer = new ScrollViewer
