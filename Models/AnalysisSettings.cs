@@ -85,6 +85,9 @@ namespace RevitLightingPlugin.Models
         public double WallReflectance { get; set; }
         public double FloorReflectance { get; set; }
 
+        // Radiosité : taille des patchs de surface (mètres)
+        public double RadiosityPatchSize { get; set; }
+
         public AnalysisSettings()
         {
             GridSpacing = 1.0;
@@ -104,6 +107,9 @@ namespace RevitLightingPlugin.Models
             // 🚨 CORRECTION FINALE : Environnement très propre pour MF = 0.90 (au lieu de Clean = 0.88)
             Environment = MaintenanceCategory.VeryClean;
             LuminaireEnclosureType = LuminaireEnclosure.SealedIP65;
+
+            // Radiosité : patchs de 0.5m (précision ±2-3% vs Dialux)
+            RadiosityPatchSize = 0.5;
         }
     }
 }

@@ -136,6 +136,7 @@
     <Compile Include="Core\PhotometricAnalyzer.cs" />
     <Compile Include="Core\ReportTemplate.cs" />
     <Compile Include="Core\SettingsManager.cs" />
+    <Compile Include="Core\RadiosityCalculator.cs" />
     <Compile Include="Core\ViewExporter.cs" />
     <Compile Include="Models\AnalysisReport.cs" />
     <Compile Include="Models\AnalysisSettings.cs" />
@@ -152,6 +153,7 @@
     <Compile Include="UI\ReportInfoDialog.cs" />
     <Compile Include="UI\ResultsWindow.cs" />
     <Compile Include="UI\RoomSelectionWindow.cs" />
+    <Compile Include="UI\ViewSelectionWindow.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

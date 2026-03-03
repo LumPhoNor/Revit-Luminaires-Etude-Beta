@@ -65,6 +65,18 @@ namespace RevitLightingPlugin.Commands
                 double maintenanceFactor = analysisWindow.MaintenanceFactor;
                 Logger.Info("LightingAnalysisCmd", $"Paramètres: GridSpacing={settings.GridSpacing}m, Heights={string.Join(",", settings.WorkPlaneHeights)}m, MF={maintenanceFactor:F2}");
 
+                // Ouvrir la fenêtre de sélection des vues 2D/3D
+                Logger.Debug("LightingAnalysisCmd", "Ouverture fenêtre de sélection des vues");
+                var viewSelectionWindow = new ViewSelectionWindow(doc, selectedRooms);
+                if (viewSelectionWindow.ShowDialog() != true)
+                {
+                    Logger.Warning("LightingAnalysisCmd", "Sélection des vues annulée par l'utilisateur");
+                    Logger.ExitMethod("LightingAnalysisCommand", "Execute", "Result.Cancelled");
+                    return Result.Cancelled;
+                }
+                var viewSelections = viewSelectionWindow.Selections;
+                Logger.Info("LightingAnalysisCmd", $"Sélection des vues confirmée pour {viewSelections.Count} pièce(s)");
+
                 // Afficher la fenêtre de chargement animée
                 var loadingWindow = LoadingWindow.ShowLoading();
 
@@ -82,14 +94,23 @@ namespace RevitLightingPlugin.Commands
                 var viewExporter = new ViewExporter(doc, tempFolder);
                 var roomViewExports = new Dictionary<ElementId, RoomViewsExport>();
 
-                // Exporter vues pour chaque pièce
+                // Exporter vues pour chaque pièce (avec les choix de l'utilisateur)
                 Logger.Info("LightingAnalysisCmd", "Export des vues 2D/3D des pièces");
                 loadingWindow?.SetStatus("Export des vues 2D/3D...");
                 foreach (var room in selectedRooms)
                 {
                     Logger.Debug("LightingAnalysisCmd", $"Export vues pour pièce: {room.Name}");
                     loadingWindow?.SetStatus($"Export vue : {room.Name}");
-                    var viewExport = viewExporter.ExportRoomViews(room);
+
+                    ElementId planId  = null; // null = Automatique par défaut
+                    ElementId view3dId = null;
+                    if (viewSelections.ContainsKey(room.Id))
+                    {
+                        planId   = viewSelections[room.Id].PlanViewId;
+                        view3dId = viewSelections[room.Id].View3DId;
+                    }
+
+                    var viewExport = viewExporter.ExportRoomViews(room, planId, view3dId);
                     roomViewExports[room.Id] = viewExport;
                 }
 

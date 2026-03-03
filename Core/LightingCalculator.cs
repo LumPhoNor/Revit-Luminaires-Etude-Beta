@@ -156,8 +156,30 @@ namespace RevitLightingPlugin.Core
             // (type de luminaire + environnement)
             double maintenanceFactor = settings.GetMaintenanceFactor();
 
-            // P2: Calculer le facteur d'éclairement indirect
-            double indirectFactor = CalculateIndirectFactor(room, settings);
+            // RADIOSITÉ : génération des patchs de surface + facteurs de forme + résolution
+            List<RadiosityPatch> radPatches = null;
+            if (settings.IncludeIndirectLight)
+            {
+                try
+                {
+                    var radCalc = new RadiosityCalculator();
+                    radPatches = radCalc.GenerateRoomPatches(bbox, settings.RadiosityPatchSize, settings);
+                    FillDirectIlluminanceOnPatches(radPatches, luminaires, luminaireInfos, maintenanceFactor);
+                    var formFactors = radCalc.ComputeFormFactors(radPatches);
+                    radCalc.SolveRadiosity(radPatches, formFactors);
+                    Logger.Debug("LightingCalculator", $"Radiosité : {radPatches.Count} patchs, patchSize={settings.RadiosityPatchSize:F2}m");
+                }
+                catch (Exception exRad)
+                {
+                    Logger.Warning("LightingCalculator", $"Radiosité échouée, fallback coefficient : {exRad.Message}");
+                    radPatches = null;
+                }
+            }
+
+            // Fallback : ancien coefficient si radiosité désactivée ou en erreur
+            double indirectFactor = (settings.IncludeIndirectLight && radPatches == null)
+                ? CalculateIndirectFactor(room, settings)
+                : 0.0;
 
             // === DIAGNOSTIC COMPLET : BBox pièce + positions de TOUS les luminaires ===
             LogDebug($"");
@@ -301,11 +323,16 @@ namespace RevitLightingPlugin.Core
                     // Appliquer le facteur de maintenance
                     totalIlluminance *= maintenanceFactor;
 
-                    // P2: Ajouter flux indirect (réflexions des surfaces)
-                    double indirectIlluminance = totalIlluminance * indirectFactor;
+                    // RADIOSITÉ : contribution indirecte depuis les patchs (ou fallback coefficient)
+                    double indirectIlluminance;
+                    if (radPatches != null)
+                        indirectIlluminance = RadiosityCalculator.GetIndirectIlluminanceAtPoint(testPoint, radPatches);
+                    else
+                        indirectIlluminance = totalIlluminance * indirectFactor;
+
                     totalIlluminance += indirectIlluminance;
 
-                    // LOG DE DÉBOGAGE (premier point seulement) - CORRIGÉ: AppendAllText au lieu de WriteAllText
+                    // LOG DE DÉBOGAGE (premier point seulement)
                     if (gridPoints.Count == 0)
                     {
                         LogDebug($"");
@@ -314,7 +341,7 @@ namespace RevitLightingPlugin.Core
                         LogDebug($"[PT1] Éclairement DIRECT (avant MF): {directIlluminance:F2} lux");
                         LogDebug($"[PT1] Facteur maintenance: {maintenanceFactor:F2}");
                         LogDebug($"[PT1] Éclairement après MF: {directIlluminance * maintenanceFactor:F2} lux");
-                        LogDebug($"[PT1] Indirect activé: {settings.IncludeIndirectLight}, facteur: {indirectFactor:P1}");
+                        LogDebug($"[PT1] Méthode indirect: {(radPatches != null ? $"Radiosité ({radPatches.Count} patchs)" : $"Coefficient ({indirectFactor:P1})")}");
                         LogDebug($"[PT1] Éclairement INDIRECT: {indirectIlluminance:F2} lux");
                         LogDebug($"[PT1] Éclairement TOTAL: {totalIlluminance:F2} lux");
                         LogDebug($"[PT1] Réflectances: plafond={settings.CeilingReflectance:F2}, murs={settings.WallReflectance:F2}, sol={settings.FloorReflectance:F2}");
@@ -687,6 +714,72 @@ namespace RevitLightingPlugin.Core
         /// Prend en compte les réflexions sur les surfaces (plafond, murs, sol)
         /// Conforme CIE 121-1996 et EN 12464-1
         /// </summary>
+        /// <summary>
+        /// Remplit l'éclairement direct (lux) sur chaque patch de radiosité depuis les luminaires.
+        /// Formule : E = I(γ) × cos(γ) × cos(θ_patch) / r²
+        /// </summary>
+        private void FillDirectIlluminanceOnPatches(
+            List<RadiosityPatch> patches,
+            List<FamilyInstance> luminaires,
+            List<LuminaireInfo> luminaireInfos,
+            double maintenanceFactor)
+        {
+            for (int pi = 0; pi < patches.Count; pi++)
+            {
+                var patch = patches[pi];
+                double totalE = 0.0;
+
+                for (int i = 0; i < luminaires.Count; i++)
+                {
+                    var luminaire = luminaires[i];
+                    var info      = luminaireInfos[i];
+
+                    XYZ lumLocation = (luminaire.Location as LocationPoint)?.Point;
+                    if (lumLocation == null) continue;
+
+                    // Correction hauteur source (même logique que la grille)
+                    BoundingBoxXYZ lumBbox = luminaire.get_BoundingBox(null);
+                    if (lumBbox != null)
+                    {
+                        double realZ = GetLightSourceHeight(luminaire, lumBbox, false);
+                        lumLocation = new XYZ(lumLocation.X, lumLocation.Y, realZ);
+                    }
+
+                    // Direction du luminaire vers le centre du patch
+                    double ddx = patch.Center.X - lumLocation.X;
+                    double ddy = patch.Center.Y - lumLocation.Y;
+                    double ddz = patch.Center.Z - lumLocation.Z;
+                    double rFeet = Math.Sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+                    if (rFeet < 0.01) continue;
+
+                    double inv = 1.0 / rFeet;
+                    double nx = ddx * inv, ny = ddy * inv, nz = ddz * inv;
+
+                    // cos(γ) : angle depuis la nadir du luminaire (pointe vers le bas)
+                    double cosGamma = -nz;  // luminaire au-dessus → nz < 0 → cosGamma > 0
+                    if (cosGamma <= 0) continue;
+
+                    // cos(θ_patch) : angle d'incidence sur la surface du patch
+                    // patch.Normal pointe vers l'intérieur de la pièce
+                    // direction FROM luminaire TO patch = (nx, ny, nz)
+                    // cosPatch = dot(patch.Normal, -(nx,ny,nz))
+                    double cosPatch = -(patch.Normal.X * nx + patch.Normal.Y * ny + patch.Normal.Z * nz);
+                    if (cosPatch <= 0) continue;
+
+                    double gamma = Math.Acos(Math.Max(-1.0, Math.Min(1.0, cosGamma))) * (180.0 / Math.PI);
+                    double intensity = GetLuminaireIntensity(luminaire, info, gamma);
+
+                    double distanceMeters = rFeet * 0.3048;
+                    if (distanceMeters < 0.03) distanceMeters = 0.03;
+
+                    double E = (intensity * cosGamma * cosPatch) / (distanceMeters * distanceMeters);
+                    totalE += E;
+                }
+
+                patch.DirectIlluminance = totalE * maintenanceFactor;
+            }
+        }
+
         private double CalculateIndirectFactor(Room room, AnalysisSettings settings)
         {
             if (!settings.IncludeIndirectLight)

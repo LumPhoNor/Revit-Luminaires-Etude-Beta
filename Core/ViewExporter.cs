@@ -24,7 +24,20 @@ namespace RevitLightingPlugin.Core
             }
         }
 
+        /// <summary>Export automatique (comportement d'origine).</summary>
         public RoomViewsExport ExportRoomViews(Room room)
+        {
+            return ExportRoomViews(room, null, null);
+        }
+
+        /// <summary>
+        /// Export avec choix explicite des vues.
+        /// planViewId / view3DId :
+        ///   null                  => Automatique (le plugin choisit / crée)
+        ///   ElementId.InvalidElementId => Aucune (on ne génère pas cette vue)
+        ///   autre ElementId       => vue existante choisie par l'utilisateur
+        /// </summary>
+        public RoomViewsExport ExportRoomViews(Room room, ElementId planViewId, ElementId view3DId)
         {
             var result = new RoomViewsExport
             {
@@ -35,14 +48,40 @@ namespace RevitLightingPlugin.Core
 
             try
             {
-                string planPath = ExportPlanView(room);
+                // ── Vue Plan ──
+                string planPath = null;
+                if (planViewId == null)
+                {
+                    // Automatique
+                    planPath = ExportPlanView(room);
+                }
+                else if (!planViewId.Equals(ElementId.InvalidElementId))
+                {
+                    // Vue choisie par l'utilisateur
+                    planPath = ExportSpecificPlanView(room, planViewId);
+                }
+                // else : Aucune → planPath reste null
+
                 if (!string.IsNullOrEmpty(planPath) && File.Exists(planPath))
                 {
                     result.PlanImagePath = planPath;
                     result.Success = true;
                 }
 
-                string view3DPath = Export3DView(room);
+                // ── Vue 3D ──
+                string view3DPath = null;
+                if (view3DId == null)
+                {
+                    // Automatique
+                    view3DPath = Export3DView(room);
+                }
+                else if (!view3DId.Equals(ElementId.InvalidElementId))
+                {
+                    // Vue choisie par l'utilisateur
+                    view3DPath = ExportSpecific3DView(room, view3DId);
+                }
+                // else : Aucune → view3DPath reste null
+
                 if (!string.IsNullOrEmpty(view3DPath) && File.Exists(view3DPath))
                 {
                     result.View3DImagePath = view3DPath;
@@ -262,6 +301,106 @@ namespace RevitLightingPlugin.Core
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Erreur export 3D : {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Exporte une vue plan existante telle quelle (cadrage Revit respecté).
+        /// </summary>
+        private string ExportSpecificPlanView(Room room, ElementId viewId)
+        {
+            Logger.Debug("ViewExporter", $"ExportSpecificPlanView: {room.Name}, viewId={viewId}");
+            try
+            {
+                ViewPlan planView = _doc.GetElement(viewId) as ViewPlan;
+                if (planView == null)
+                {
+                    Logger.Warning("ViewExporter", $"Vue plan introuvable (id={viewId}) pour {room.Name}");
+                    return null;
+                }
+
+                string fileName = $"Plan_{room.Id.Value}_{DateTime.Now.Ticks}";
+
+                ImageExportOptions options = new ImageExportOptions
+                {
+                    ZoomType = ZoomFitType.FitToPage,
+                    PixelSize = 1920,
+                    ImageResolution = ImageResolution.DPI_300,
+                    FilePath = Path.Combine(_exportFolder, fileName),
+                    FitDirection = FitDirectionType.Horizontal,
+                    ExportRange = ExportRange.SetOfViews,
+                    HLRandWFViewsFileType = ImageFileType.PNG
+                };
+
+                options.SetViewsAndSheets(new List<ElementId> { planView.Id });
+                _doc.ExportImage(options);
+
+                string[] found = Directory.GetFiles(_exportFolder, $"Plan_{room.Id.Value}_*")
+                    .OrderByDescending(f => File.GetCreationTime(f)).ToArray();
+
+                if (found.Length > 0)
+                {
+                    Logger.Info("ViewExporter", $"✅ Vue plan spécifique exportée : {found[0]}");
+                    return found[0];
+                }
+
+                Logger.Warning("ViewExporter", $"❌ Aucun fichier plan trouvé pour {room.Name} (vue {planView.Name})");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("ViewExporter", $"Erreur export vue plan spécifique pour {room.Name}: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Exporte une vue 3D existante telle quelle (orientation/caméra Revit respectée).
+        /// </summary>
+        private string ExportSpecific3DView(Room room, ElementId viewId)
+        {
+            Logger.Debug("ViewExporter", $"ExportSpecific3DView: {room.Name}, viewId={viewId}");
+            try
+            {
+                View3D view3D = _doc.GetElement(viewId) as View3D;
+                if (view3D == null)
+                {
+                    Logger.Warning("ViewExporter", $"Vue 3D introuvable (id={viewId}) pour {room.Name}");
+                    return null;
+                }
+
+                string fileName = $"3D_{room.Id.Value}_{DateTime.Now.Ticks}";
+
+                ImageExportOptions options = new ImageExportOptions
+                {
+                    ZoomType = ZoomFitType.FitToPage,
+                    PixelSize = 1920,
+                    ImageResolution = ImageResolution.DPI_300,
+                    FilePath = Path.Combine(_exportFolder, fileName),
+                    FitDirection = FitDirectionType.Horizontal,
+                    ExportRange = ExportRange.SetOfViews,
+                    HLRandWFViewsFileType = ImageFileType.PNG
+                };
+
+                options.SetViewsAndSheets(new List<ElementId> { view3D.Id });
+                _doc.ExportImage(options);
+
+                string[] found = Directory.GetFiles(_exportFolder, $"3D_{room.Id.Value}_*")
+                    .OrderByDescending(f => File.GetCreationTime(f)).ToArray();
+
+                if (found.Length > 0)
+                {
+                    Logger.Info("ViewExporter", $"✅ Vue 3D spécifique exportée : {found[0]}");
+                    return found[0];
+                }
+
+                Logger.Warning("ViewExporter", $"❌ Aucun fichier 3D trouvé pour {room.Name} (vue {view3D.Name})");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("ViewExporter", $"Erreur export vue 3D spécifique pour {room.Name}: {ex.Message}", ex);
                 return null;
             }
         }
