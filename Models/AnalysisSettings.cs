@@ -88,6 +88,9 @@ namespace RevitLightingPlugin.Models
         // Radiosité : taille des patchs de surface (mètres)
         public double RadiosityPatchSize { get; set; }
 
+        // Marge murale : distance minimale des murs exclue du calcul (mètres)
+        public double WallMargin { get; set; }
+
         public AnalysisSettings()
         {
             GridSpacing = 1.0;
@@ -110,6 +113,9 @@ namespace RevitLightingPlugin.Models
 
             // Radiosité : patchs de 0.5m (précision ±2-3% vs Dialux)
             RadiosityPatchSize = 0.5;
+
+            // Marge murale : 0 par défaut (calcul jusqu'aux murs)
+            WallMargin = 0.0;
         }
     }
 }

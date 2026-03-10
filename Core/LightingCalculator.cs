@@ -105,6 +105,7 @@ namespace RevitLightingPlugin.Core
             // Convertir mètres en pieds pour Revit
             double gridSpacingFeet = settings.GridSpacing * 3.28084;
             double workplaneHeightFeet = workPlaneHeight * 3.28084;
+            double wallMarginFeet = settings.WallMargin * 3.28084;
 
             // NOUVEAU : Calcul par grille de points avec paramètres
             Logger.Debug("LightingCalculator", "  Calcul de la grille d'éclairement...");
@@ -191,8 +192,16 @@ namespace RevitLightingPlugin.Core
             LogDebug($"[ROOM] Dimensions: {(bbox.Max.X - bbox.Min.X) * 0.3048:F2} m x {(bbox.Max.Y - bbox.Min.Y) * 0.3048:F2} m x {(bbox.Max.Z - bbox.Min.Z) * 0.3048:F2} m");
             LogDebug($"[ROOM] Plan de travail Z = bbox.Min.Z + workplane = {bbox.Min.Z:F3} + {workplaneHeightFeet:F3} = {bbox.Min.Z + workplaneHeightFeet:F3} ft ({(bbox.Min.Z + workplaneHeightFeet) * 0.3048:F2} m)");
             LogDebug($"[ROOM] Grille espacement: {gridSpacingFeet:F3} ft ({gridSpacingFeet * 0.3048:F2} m)");
+            double wallMarginFeet = settings.WallMargin * 3.28084;
+            LogDebug($"[ROOM] Marge murale: {wallMarginFeet:F3} ft ({settings.WallMargin:F2} m)");
             LogDebug($"[ROOM] Nombre luminaires: {luminaires.Count}");
             LogDebug($"");
+
+            // Zone de calcul réduite par la marge murale
+            double xMin = bbox.Min.X + wallMarginFeet;
+            double xMax = bbox.Max.X - wallMarginFeet;
+            double yMin = bbox.Min.Y + wallMarginFeet;
+            double yMax = bbox.Max.Y - wallMarginFeet;
 
             for (int li = 0; li < luminaires.Count; li++)
             {
@@ -208,9 +217,9 @@ namespace RevitLightingPlugin.Core
             // Stocker les hauteurs calculées des luminaires pour calcul de moyenne
             List<double> luminaireHeightsMeters = new List<double>();
 
-            for (double x = bbox.Min.X; x <= bbox.Max.X; x += gridSpacingFeet)
+            for (double x = xMin; x <= xMax; x += gridSpacingFeet)
             {
-                for (double y = bbox.Min.Y; y <= bbox.Max.Y; y += gridSpacingFeet)
+                for (double y = yMin; y <= yMax; y += gridSpacingFeet)
                 {
                     XYZ testPoint = new XYZ(x, y, bbox.Min.Z + workplaneHeightFeet);
 
@@ -239,10 +248,12 @@ namespace RevitLightingPlugin.Core
                             bool isFirstPoint = (i == 0 && gridPoints.Count == 0);
                             double realZ = GetLightSourceHeight(luminaire, lumBbox, isFirstPoint);
 
-                            // Stocker la hauteur pour calcul de moyenne (seulement au premier point de grille)
+                            // Stocker la hauteur de POSE (bas du luminaire au-dessus du sol) pour affichage PDF
+                            // ≠ source photométrique (realZ) utilisée pour les calculs d'éclairement
                             if (gridPoints.Count == 0)
                             {
-                                luminaireHeightsMeters.Add(realZ * 0.3048); // Convertir en mètres
+                                double poseHeightFt = lumBbox.Min.Z - bbox.Min.Z; // Bas du luminaire - sol de la pièce
+                                luminaireHeightsMeters.Add(poseHeightFt * 0.3048);
                             }
 
                             // Logs géométriques pour diagnostic (premier luminaire + premier point seulement)
@@ -1019,13 +1030,13 @@ namespace RevitLightingPlugin.Core
 
                             // Dossiers IES standards
                             searchFolders.Add($@"C:\ProgramData\Autodesk\RVT {revitVersion}\IES");
-                            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2026\IES");
+                            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2024\IES");
 
                             // Dossiers bibliothèques photométriques Revit
                             searchFolders.Add($@"C:\ProgramData\Autodesk\RVT {revitVersion}\Libraries\Lighting - Photometric Web");
-                            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2026\Libraries\Lighting - Photometric Web");
+                            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2024\Libraries\Lighting - Photometric Web");
                             searchFolders.Add($@"C:\ProgramData\Autodesk\RVT {revitVersion}\Libraries\Lighting");
-                            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2026\Libraries\Lighting");
+                            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2024\Libraries\Lighting");
 
                             // Dossiers bibliothèques génériques
                             searchFolders.Add(@"C:\ProgramData\Autodesk\Libraries\Lighting - Photometric Web");
@@ -1097,13 +1108,13 @@ namespace RevitLightingPlugin.Core
 
             // Dossiers IES standards
             searchFolders.Add($@"C:\ProgramData\Autodesk\RVT {revitVersion}\IES");
-            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2026\IES");
+            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2024\IES");
 
             // Dossiers bibliothèques photométriques Revit
             searchFolders.Add($@"C:\ProgramData\Autodesk\RVT {revitVersion}\Libraries\Lighting - Photometric Web");
-            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2026\Libraries\Lighting - Photometric Web");
+            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2024\Libraries\Lighting - Photometric Web");
             searchFolders.Add($@"C:\ProgramData\Autodesk\RVT {revitVersion}\Libraries\Lighting");
-            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2026\Libraries\Lighting");
+            searchFolders.Add(@"C:\ProgramData\Autodesk\RVT 2024\Libraries\Lighting");
 
             // Dossiers génériques
             searchFolders.Add(@"C:\ProgramData\Autodesk\Libraries\Lighting - Photometric Web");
@@ -1147,7 +1158,7 @@ namespace RevitLightingPlugin.Core
             }
 
             // Recherche récursive alternative
-            photometricFolder = @"C:\ProgramData\Autodesk\RVT 2026\Libraries\Lighting - Photometric Web";
+            photometricFolder = @"C:\ProgramData\Autodesk\RVT 2024\Libraries\Lighting - Photometric Web";
             if (Directory.Exists(photometricFolder))
             {
                 try

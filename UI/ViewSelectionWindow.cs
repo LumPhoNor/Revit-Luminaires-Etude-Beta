@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.DB;
+using Grid = System.Windows.Controls.Grid;
 using Autodesk.Revit.DB.Architecture;
+using WpfColor = System.Windows.Media.Color;
 
 namespace RevitLightingPlugin.UI
 {
@@ -71,89 +74,31 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeComponent()
         {
+            SkyLightTheme.ApplyDarkWindow(this, 760, 520);
             Title = "Sélection des Vues";
-            Width = 760;
-            Height = 520;
-            MinWidth = 600;
-            MinHeight = 380;
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            ResizeMode = ResizeMode.CanResize;
 
             var mainGrid = new Grid();
             mainGrid.Margin = new Thickness(0);
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });          // header
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // liste
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });          // boutons
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // ── Header bicolore ──
-            var headerDock = new DockPanel { LastChildFill = true };
-
-            string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo SkyLight.jpg";
-            if (System.IO.File.Exists(logoPath))
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(logoPath);
-                bmp.DecodePixelHeight = 90;
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-
-                var logoImg = new Image
-                {
-                    Source = bmp,
-                    Height = 90,
-                    Stretch = System.Windows.Media.Stretch.Uniform,
-                    Margin = new Thickness(8),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                var logoBorder = new Border
-                {
-                    Background = System.Windows.Media.Brushes.White,
-                    Child = logoImg
-                };
-                DockPanel.SetDock(logoBorder, Dock.Left);
-                headerDock.Children.Add(logoBorder);
-            }
-
-            var titleZone = new StackPanel
-            {
-                Background = System.Windows.Media.Brushes.LightSteelBlue,
-                VerticalAlignment = VerticalAlignment.Stretch,
-                Margin = new Thickness(0)
-            };
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "Sélection des Vues",
-                FontSize = 18,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(15, 22, 15, 4),
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "Choisissez les vues à inclure dans le rapport pour chaque pièce",
-                FontSize = 11,
-                Margin = new Thickness(15, 0, 15, 10),
-                Foreground = System.Windows.Media.Brushes.DimGray
-            });
-            headerDock.Children.Add(titleZone);
-
+            var headerDock = SkyLightTheme.BuildDarkHeader(
+                "Sélection des Vues", "Vues 2D/3D à inclure dans le rapport", this);
             Grid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
 
             // ── Tableau des pièces ──
-            var scroll = new ScrollViewer
+            var tableContainer = new Border
             {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Margin = new Thickness(15, 12, 15, 0)
+                Margin = new Thickness(15, 12, 15, 0),
+                BorderBrush = new SolidColorBrush(WpfColor.FromArgb(80, 0, 185, 255)),
+                BorderThickness = new Thickness(1),
+                Background = new SolidColorBrush(WpfColor.FromArgb(30, 0, 60, 120))
             };
-
-            var listView = BuildListView();
-            scroll.Content = listView;
-
-            Grid.SetRow(scroll, 1);
-            mainGrid.Children.Add(scroll);
+            tableContainer.Child = BuildTable();
+            Grid.SetRow(tableContainer, 1);
+            mainGrid.Children.Add(tableContainer);
 
             // ── Boutons ──
             var btnPanel = new StackPanel
@@ -172,6 +117,7 @@ namespace RevitLightingPlugin.UI
                 Margin = new Thickness(0, 0, 10, 0),
                 IsDefault = true
             };
+            SkyLightTheme.StyleButton(btnOk, true);
             btnOk.Click += OnOkClick;
             btnPanel.Children.Add(btnOk);
 
@@ -182,107 +128,128 @@ namespace RevitLightingPlugin.UI
                 Height = 30,
                 IsCancel = true
             };
+            SkyLightTheme.StyleButton(btnCancel, false);
             btnCancel.Click += (s, e) => { DialogResult = false; Close(); };
             btnPanel.Children.Add(btnCancel);
 
             mainGrid.Children.Add(btnPanel);
 
-            Content = mainGrid;
+            Content = SkyLightTheme.BuildDarkShell(mainGrid, 730, 490);
         }
 
-        private ListView BuildListView()
+        /// <summary>Construit un tableau header+lignes sans ListView/GridView pour garantir l'alignement des colonnes.</summary>
+        private Grid BuildTable()
         {
             _rows = new List<RoomViewRow>();
-
-            // Options communes pour les ComboBoxes
             var planOptions = BuildPlanOptions();
             var view3dOptions = Build3DOptions();
 
-            var listView = new ListView();
+            var table = new Grid();
+            table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });                          // en-tête
+            table.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });     // lignes
 
-            var gridView = new GridView();
-
-            // Colonne Pièce
-            var colRoom = new GridViewColumn
+            // ── En-tête ──
+            var headerBorder = new Border
             {
-                Header = "Pièce",
-                Width = 200
+                Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(70, 130, 180)),
+                Height = 32
             };
-            colRoom.CellTemplate = MakeTextTemplate("RoomLabel");
-            gridView.Columns.Add(colRoom);
+            var headerGrid = MakeRowGrid();
+            AddHeaderCell(headerGrid, "Pièce",         0);
+            AddHeaderCell(headerGrid, "Vue Plan (2D)", 1);
+            AddHeaderCell(headerGrid, "Vue 3D",        2);
+            headerBorder.Child = headerGrid;
+            Grid.SetRow(headerBorder, 0);
+            table.Children.Add(headerBorder);
 
-            // Colonne Vue Plan
-            var colPlan = new GridViewColumn
-            {
-                Header = "Vue Plan (2D)",
-                Width = 250
-            };
-            gridView.Columns.Add(colPlan);
+            // ── Lignes de données ──
+            var rowsPanel = new StackPanel();
 
-            // Colonne Vue 3D
-            var col3D = new GridViewColumn
-            {
-                Header = "Vue 3D",
-                Width = 250
-            };
-            gridView.Columns.Add(col3D);
-
-            listView.View = gridView;
-
-            // Remplir les lignes
+            bool alternate = false;
             foreach (var room in _rooms)
             {
                 var row = new RoomViewRow
                 {
-                    RoomId = room.Id,
+                    RoomId    = room.Id,
                     RoomLabel = $"{room.Name}  ({room.Number})"
                 };
 
-                var cbPlan = new ComboBox { Width = 230, Margin = new Thickness(2) };
-                foreach (var opt in planOptions)
-                    cbPlan.Items.Add(opt);
-                cbPlan.SelectedIndex = 0; // Automatique
+                var cbPlan = new ComboBox { Margin = new Thickness(4, 2, 4, 2), VerticalAlignment = VerticalAlignment.Center };
+                foreach (var opt in planOptions) cbPlan.Items.Add(opt);
+                cbPlan.SelectedIndex = 0;
                 row.ComboPlan = cbPlan;
 
-                var cb3D = new ComboBox { Width = 230, Margin = new Thickness(2) };
-                foreach (var opt in view3dOptions)
-                    cb3D.Items.Add(opt);
-                cb3D.SelectedIndex = 0; // Automatique
+                var cb3D = new ComboBox { Margin = new Thickness(4, 2, 4, 2), VerticalAlignment = VerticalAlignment.Center };
+                foreach (var opt in view3dOptions) cb3D.Items.Add(opt);
+                cb3D.SelectedIndex = 0;
                 row.Combo3D = cb3D;
 
                 _rows.Add(row);
 
-                // Chaque ligne est un Grid dans le ListViewItem
-                var rowGrid = new Grid();
-                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
-                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
-                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
+                var rowGrid = MakeRowGrid();
+                rowGrid.Height = 36;
 
                 var lblRoom = new TextBlock
                 {
                     Text = row.RoomLabel,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(4, 0, 4, 0),
+                    Margin = new Thickness(8, 0, 4, 0),
                     TextTrimming = TextTrimming.CharacterEllipsis
                 };
-                Grid.SetColumn(lblRoom, 0);
+                Grid.SetColumn(lblRoom,  0);
+                Grid.SetColumn(cbPlan,   1);
+                Grid.SetColumn(cb3D,     2);
                 rowGrid.Children.Add(lblRoom);
-
-                Grid.SetColumn(cbPlan, 1);
                 rowGrid.Children.Add(cbPlan);
-
-                Grid.SetColumn(cb3D, 2);
                 rowGrid.Children.Add(cb3D);
 
-                var item = new ListViewItem
+                var rowBorder = new Border
                 {
-                    Content = rowGrid,
-                    Height = 36
+                    Child = rowGrid,
+                    Background = alternate
+                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 248, 252))
+                        : System.Windows.Media.Brushes.White,
+                    BorderBrush     = System.Windows.Media.Brushes.LightGray,
+                    BorderThickness = new Thickness(0, 0, 0, 1)
                 };
-                listView.Items.Add(item);
+                rowsPanel.Children.Add(rowBorder);
+                alternate = !alternate;
             }
 
-            return listView;
+            var scroll = new ScrollViewer
+            {
+                Content = rowsPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
+            Grid.SetRow(scroll, 1);
+            table.Children.Add(scroll);
+
+            return table;
+        }
+
+        // Crée un Grid à 3 colonnes proportionnelles partagé entre header et lignes
+        private static Grid MakeRowGrid()
+        {
+            var g = new Grid();
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2,   GridUnitType.Star) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2,   GridUnitType.Star) });
+            return g;
+        }
+
+        private static void AddHeaderCell(Grid g, string text, int col)
+        {
+            var tb = new TextBlock
+            {
+                Text = text,
+                FontWeight = FontWeights.Bold,
+                Foreground = System.Windows.Media.Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 0, 4, 0)
+            };
+            Grid.SetColumn(tb, col);
+            g.Children.Add(tb);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -311,13 +278,6 @@ namespace RevitLightingPlugin.UI
             foreach (var v in _available3DViews)
                 list.Add(new ViewComboItem { Label = v.Name, ViewId = v.Id });
             return list;
-        }
-
-        // Helper : CellTemplate affichant une propriété texte (non utilisé pour les ComboBoxes mais gardé pour la colonne Pièce)
-        private DataTemplate MakeTextTemplate(string bindingPath)
-        {
-            // Non utilisé finalement (on construit les cellules manuellement), retourne null
-            return null;
         }
 
         // ─────────────────────────────────────────────────────────────

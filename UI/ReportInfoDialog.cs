@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using WpfGrid = System.Windows.Controls.Grid;
 
@@ -25,11 +27,8 @@ namespace RevitLightingPlugin.UI
 
         public ReportInfoDialog()
         {
+            SkyLightTheme.ApplyDarkWindow(this, 550, 550);
             Title = "Informations du Rapport";
-            Width = 550;
-            Height = 550;
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            ResizeMode = ResizeMode.NoResize;
 
             InitializeUI();
             LoadDefaults();
@@ -42,59 +41,8 @@ namespace RevitLightingPlugin.UI
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) });
 
-            // En-tête : logo fond blanc à gauche + zone titre fond bleu
-            var headerDock = new DockPanel { LastChildFill = true };
-
-            // Zone logo - fond blanc
-            string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo SkyLight.jpg";
-            if (System.IO.File.Exists(logoPath))
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(logoPath);
-                bmp.DecodePixelHeight = 90;
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-                var logoImg = new Image
-                {
-                    Source = bmp,
-                    Height = 90,
-                    Stretch = System.Windows.Media.Stretch.Uniform,
-                    Margin = new Thickness(8),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                var logoBorder = new Border
-                {
-                    Background = System.Windows.Media.Brushes.White,
-                    Child = logoImg
-                };
-                DockPanel.SetDock(logoBorder, Dock.Left);
-                headerDock.Children.Add(logoBorder);
-            }
-
-            // Zone titre - fond bleu
-            var titleZone = new StackPanel
-            {
-                Background = System.Windows.Media.Brushes.LightSteelBlue,
-                VerticalAlignment = VerticalAlignment.Stretch
-            };
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "📋 Informations du Rapport PDF",
-                FontSize = 18,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(15, 18, 15, 4),
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "Ces informations apparaîtront sur la page de garde",
-                FontSize = 11,
-                Margin = new Thickness(15, 0, 15, 12)
-            });
-            headerDock.Children.Add(titleZone);
-
+            var headerDock = SkyLightTheme.BuildDarkHeader(
+                "Informations du Rapport", "Ces informations apparaîtront sur la page de garde", this);
             WpfGrid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
 
@@ -103,6 +51,7 @@ namespace RevitLightingPlugin.UI
             {
                 Margin = new Thickness(20, 15, 20, 15)
             };
+            SkyLightTheme.SetPanelForeground(formPanel);
 
             // Nom de l'affaire
             formPanel.Children.Add(new TextBlock
@@ -117,6 +66,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
+            SkyLightTheme.StyleTextBox(_projectNameTextBox);
             formPanel.Children.Add(_projectNameTextBox);
 
             // Référence du projet
@@ -132,6 +82,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
+            SkyLightTheme.StyleTextBox(_projectReferenceTextBox);
             formPanel.Children.Add(_projectReferenceTextBox);
 
             // Client
@@ -147,6 +98,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
+            SkyLightTheme.StyleTextBox(_clientNameTextBox);
             formPanel.Children.Add(_clientNameTextBox);
 
             // Bureau d'études
@@ -162,6 +114,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
+            SkyLightTheme.StyleTextBox(_engineeringFirmTextBox);
             formPanel.Children.Add(_engineeringFirmTextBox);
 
             // Ingénieur
@@ -177,6 +130,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
+            SkyLightTheme.StyleTextBox(_engineerNameTextBox);
             formPanel.Children.Add(_engineerNameTextBox);
 
             // Note
@@ -185,7 +139,7 @@ namespace RevitLightingPlugin.UI
                 Text = "* Champs obligatoires",
                 FontSize = 10,
                 FontStyle = FontStyles.Italic,
-                Foreground = System.Windows.Media.Brushes.Gray,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextGray),
                 Margin = new Thickness(0, 15, 0, 0)
             };
             formPanel.Children.Add(noteText);
@@ -208,6 +162,7 @@ namespace RevitLightingPlugin.UI
                 Height = 32,
                 Margin = new Thickness(0, 0, 10, 0)
             };
+            SkyLightTheme.StyleButton(okButton, true);
             okButton.Click += OkButton_Click;
 
             var cancelButton = new Button
@@ -216,6 +171,7 @@ namespace RevitLightingPlugin.UI
                 Width = 100,
                 Height = 32
             };
+            SkyLightTheme.StyleButton(cancelButton, false);
             cancelButton.Click += (s, e) => { DialogResult = false; Close(); };
 
             buttonPanel.Children.Add(okButton);
@@ -224,7 +180,7 @@ namespace RevitLightingPlugin.UI
             WpfGrid.SetRow(buttonPanel, 2);
             mainGrid.Children.Add(buttonPanel);
 
-            Content = mainGrid;
+            Content = SkyLightTheme.BuildDarkShell(mainGrid, 520, 520);
         }
 
         private void LoadDefaults()

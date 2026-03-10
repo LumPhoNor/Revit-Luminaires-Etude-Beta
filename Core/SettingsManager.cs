@@ -125,7 +125,7 @@ namespace RevitLightingPlugin.Core
             // Chemin ProgramData Autodesk
             string revitProgramDataPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "Autodesk", "RVT 2026", "Libraries", "France", "Eclairage"
+                "Autodesk", "RVT 2024", "Libraries", "France", "Eclairage"
             );
 
             if (Directory.Exists(revitProgramDataPath))

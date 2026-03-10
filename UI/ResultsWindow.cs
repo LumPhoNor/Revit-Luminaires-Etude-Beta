@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using RevitLightingPlugin.Models;
 using RevitLightingPlugin.Core;
@@ -13,6 +15,7 @@ namespace RevitLightingPlugin.UI
     {
         private List<CalculationResult> _results;
         private Autodesk.Revit.UI.UIDocument _uidoc;
+        private StackPanel _resultsPanel;
 
         public ResultsWindow(Autodesk.Revit.UI.UIDocument uidoc, List<CalculationResult> results)
         {
@@ -24,65 +27,16 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeComponent()
         {
+            SkyLightTheme.ApplyDarkWindow(this, 1000, 700);
             Title = "Résultats d'Analyse d'Éclairage";
-            Width = 1000;
-            Height = 700;
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             var mainGrid = new Grid();
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // Header : logo fond blanc à gauche + zone titre fond bleu
-            var headerDock = new DockPanel
-            {
-                LastChildFill = true,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-
-            string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo SkyLight.jpg";
-            if (System.IO.File.Exists(logoPath))
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(logoPath);
-                bmp.DecodePixelHeight = 90;
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-                var logoImg = new Image
-                {
-                    Source = bmp,
-                    Height = 90,
-                    Stretch = System.Windows.Media.Stretch.Uniform,
-                    Margin = new Thickness(8),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                var logoBorder = new Border
-                {
-                    Background = System.Windows.Media.Brushes.White,
-                    Child = logoImg
-                };
-                DockPanel.SetDock(logoBorder, Dock.Left);
-                headerDock.Children.Add(logoBorder);
-            }
-
-            var titleZone = new StackPanel
-            {
-                Background = System.Windows.Media.Brushes.LightSteelBlue,
-                VerticalAlignment = VerticalAlignment.Stretch
-            };
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "📊 Résultats d'Analyse d'Éclairage",
-                FontSize = 18,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(15, 30, 15, 10),
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            headerDock.Children.Add(titleZone);
-
+            var headerDock = SkyLightTheme.BuildDarkHeader(
+                "Résultats d'Analyse", "Éclairage EN 12464-1", this);
             Grid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
 
@@ -90,17 +44,15 @@ namespace RevitLightingPlugin.UI
             var scrollViewer = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Margin = new Thickness(10)
+                Margin     = new Thickness(10),
+                Background = System.Windows.Media.Brushes.Transparent
             };
 
-            var resultsPanel = new StackPanel();
-            scrollViewer.Content = resultsPanel;
+            _resultsPanel = new StackPanel();
+            scrollViewer.Content = _resultsPanel;
 
             Grid.SetRow(scrollViewer, 1);
             mainGrid.Children.Add(scrollViewer);
-
-            // Store reference for later use
-            resultsPanel.Tag = "ResultsPanel";
 
             // Buttons
             var buttonPanel = new StackPanel
@@ -115,9 +67,9 @@ namespace RevitLightingPlugin.UI
                 Content = "📄 Exporter en PDF",
                 Width = 150,
                 Height = 35,
-                Margin = new Thickness(0, 0, 10, 0),
-                Background = System.Windows.Media.Brushes.LightGreen
+                Margin = new Thickness(0, 0, 10, 0)
             };
+            SkyLightTheme.StyleButton(exportButton, true);
             exportButton.Click += OnExportPdfClick;
             buttonPanel.Children.Add(exportButton);
 
@@ -127,32 +79,29 @@ namespace RevitLightingPlugin.UI
                 Width = 100,
                 Height = 35
             };
+            SkyLightTheme.StyleButton(closeButton, false);
             closeButton.Click += (s, e) => Close();
             buttonPanel.Children.Add(closeButton);
 
             Grid.SetRow(buttonPanel, 2);
             mainGrid.Children.Add(buttonPanel);
 
-            Content = mainGrid;
+            Content = SkyLightTheme.BuildDarkShell(mainGrid, 970, 670);
         }
 
         private void DisplayResults()
         {
-            var mainGrid = Content as Grid;
-            var scrollViewer = mainGrid.Children.OfType<ScrollViewer>().FirstOrDefault();
-            var resultsPanel = scrollViewer?.Content as StackPanel;
+            if (_resultsPanel == null) return;
 
-            if (resultsPanel == null) return;
-
-            resultsPanel.Children.Clear();
+            _resultsPanel.Children.Clear();
 
             // Summary
-            AddSummarySection(resultsPanel);
+            AddSummarySection(_resultsPanel);
 
             // Individual room results
             foreach (var result in _results)
             {
-                AddRoomResult(resultsPanel, result);
+                AddRoomResult(_resultsPanel, result);
             }
         }
 
@@ -160,20 +109,22 @@ namespace RevitLightingPlugin.UI
         {
             var summaryBorder = new Border
             {
-                BorderBrush = System.Windows.Media.Brushes.Gray,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(80, 0, 185, 255)),
                 BorderThickness = new Thickness(1),
                 Margin = new Thickness(0, 0, 0, 20),
                 Padding = new Thickness(15),
-                Background = System.Windows.Media.Brushes.WhiteSmoke
+                Background = new SolidColorBrush(Color.FromArgb(40, 0, 80, 160))
             };
 
             var summaryStack = new StackPanel();
+            SkyLightTheme.SetPanelForeground(summaryStack);
 
             var titleText = new TextBlock
             {
                 Text = "📊 RÉSUMÉ GLOBAL",
                 FontSize = 16,
                 FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextWhite),
                 Margin = new Thickness(0, 0, 0, 15)
             };
             summaryStack.Children.Add(titleText);
@@ -194,8 +145,9 @@ namespace RevitLightingPlugin.UI
                 Text = compliantRooms == _results.Count ? "✅ PROJET CONFORME" : "⚠️ PROJET NON CONFORME",
                 FontSize = 14,
                 FontWeight = FontWeights.Bold,
-                Foreground = compliantRooms == _results.Count ?
-                    System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.Red,
+                Foreground = compliantRooms == _results.Count
+                    ? new SolidColorBrush(SkyLightTheme.GreenOk)
+                    : new SolidColorBrush(SkyLightTheme.RedWarn),
                 Margin = new Thickness(0, 15, 0, 0)
             };
             summaryStack.Children.Add(statusText);
@@ -209,20 +161,23 @@ namespace RevitLightingPlugin.UI
             var linePanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 5, 0, 5)
+                Margin      = new Thickness(0, 4, 0, 4)
             };
 
             var labelText = new TextBlock
             {
-                Text = label + " : ",
-                FontWeight = FontWeights.Bold,
-                Width = 250
+                Text       = label + " : ",
+                FontWeight = FontWeights.SemiBold,
+                Width      = 260,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextCyan)
             };
             linePanel.Children.Add(labelText);
 
             var valueText = new TextBlock
             {
-                Text = value
+                Text       = value,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextWhite)
             };
             linePanel.Children.Add(valueText);
 
@@ -231,52 +186,63 @@ namespace RevitLightingPlugin.UI
 
         private void AddRoomResult(StackPanel panel, CalculationResult result)
         {
+            var accentColor = result.MeetsStandard ? SkyLightTheme.GreenOk : SkyLightTheme.RedWarn;
+
             var roomBorder = new Border
             {
-                BorderBrush = result.MeetsStandard ?
-                    System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.OrangeRed,
-                BorderThickness = new Thickness(2),
-                Margin = new Thickness(0, 0, 0, 15),
-                Padding = new Thickness(15),
-                Background = System.Windows.Media.Brushes.White
+                BorderBrush     = new SolidColorBrush(accentColor),
+                BorderThickness = new Thickness(1),
+                CornerRadius    = new CornerRadius(6),
+                Margin          = new Thickness(0, 0, 0, 12),
+                Padding         = new Thickness(15),
+                Background      = new SolidColorBrush(Color.FromArgb(45, 0, 70, 150))
             };
 
             var roomStack = new StackPanel();
+            SkyLightTheme.SetPanelForeground(roomStack);
 
-            // Room title
-            var titlePanel = new StackPanel
+            // Room title bar
+            var titleBar = new Border
             {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 0, 0, 10)
+                Background      = new SolidColorBrush(Color.FromArgb(60, 0, 100, 200)),
+                BorderBrush     = new SolidColorBrush(accentColor),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Padding         = new Thickness(0, 0, 0, 8),
+                Margin          = new Thickness(0, 0, 0, 12)
             };
+            var titlePanel = new StackPanel { Orientation = Orientation.Horizontal };
 
             var roomTitle = new TextBlock
             {
-                Text = $"🏠 {result.RoomName}",
-                FontSize = 16,
-                FontWeight = FontWeights.Bold
+                Text       = $"🏠 {result.RoomName}",
+                FontSize   = 15,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextWhite)
             };
             titlePanel.Children.Add(roomTitle);
 
             var statusIcon = new TextBlock
             {
-                Text = result.MeetsStandard ? " ✅" : " ❌",
-                FontSize = 16,
-                Margin = new Thickness(10, 0, 0, 0)
+                Text       = result.MeetsStandard ? "  ✅ CONFORME" : "  ❌ NON CONFORME",
+                FontSize   = 13,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(accentColor),
+                Margin     = new Thickness(12, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center
             };
             titlePanel.Children.Add(statusIcon);
-
-            roomStack.Children.Add(titlePanel);
+            titleBar.Child = titlePanel;
+            roomStack.Children.Add(titleBar);
 
             // Activity type
             if (!string.IsNullOrEmpty(result.TypeActivite))
             {
                 var activityText = new TextBlock
                 {
-                    Text = $"Type d'activité : {result.TypeActivite}",
-                    FontStyle = FontStyles.Italic,
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Foreground = System.Windows.Media.Brushes.DarkSlateGray
+                    Text       = $"Type d'activité : {result.TypeActivite}",
+                    FontStyle  = FontStyles.Italic,
+                    Margin     = new Thickness(0, 0, 0, 10),
+                    Foreground = new SolidColorBrush(SkyLightTheme.TextGray)
                 };
                 roomStack.Children.Add(activityText);
             }
@@ -284,7 +250,7 @@ namespace RevitLightingPlugin.UI
             // Create grid for data
             var dataGrid = new Grid
             {
-                Margin = new Thickness(0, 10, 0, 10)
+                Margin = new Thickness(0, 4, 0, 8)
             };
             dataGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             dataGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -312,9 +278,10 @@ namespace RevitLightingPlugin.UI
             {
                 var luminairesTitle = new TextBlock
                 {
-                    Text = "💡 Luminaires installés :",
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 5)
+                    Text       = "💡 Luminaires installés :",
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(SkyLightTheme.TextCyan),
+                    Margin     = new Thickness(0, 10, 0, 4)
                 };
                 roomStack.Children.Add(luminairesTitle);
 
@@ -322,9 +289,10 @@ namespace RevitLightingPlugin.UI
                 {
                     var lumText = new TextBlock
                     {
-                        Text = $"  • {lum.Quantity}x {lum.Fabricant} {lum.TypeName} ({lum.Puissance:F0}W, {lum.FluxLumineux:F0}lm)",
-                        Margin = new Thickness(10, 2, 0, 2),
-                        FontSize = 11
+                        Text       = $"  • {lum.Quantity}x {lum.Fabricant} {lum.TypeName} ({lum.Puissance:F0}W, {lum.FluxLumineux:F0}lm)",
+                        Margin     = new Thickness(10, 2, 0, 2),
+                        FontSize   = 11,
+                        Foreground = new SolidColorBrush(SkyLightTheme.TextWhite)
                     };
                     roomStack.Children.Add(lumText);
                 }
@@ -335,21 +303,22 @@ namespace RevitLightingPlugin.UI
             {
                 var heightsTitle = new TextBlock
                 {
-                    Text = "📐 Résultats par hauteur de plan de travail :",
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 15, 0, 5)
+                    Text       = "📐 Résultats par hauteur de plan de travail :",
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(SkyLightTheme.TextCyan),
+                    Margin     = new Thickness(0, 12, 0, 4)
                 };
                 roomStack.Children.Add(heightsTitle);
 
                 foreach (var heightResult in result.HeightResults)
                 {
+                    var hColor = heightResult.MeetsStandard ? SkyLightTheme.GreenOk : SkyLightTheme.RedWarn;
                     var heightText = new TextBlock
                     {
-                        Text = $"  Hauteur {heightResult.WorkPlaneHeight:F2} m : {heightResult.AverageIlluminance:F0} lux (moy), {heightResult.MinIlluminance:F0} lux (min), Uniformité {heightResult.Uniformity:F2}",
-                        Margin = new Thickness(10, 2, 0, 2),
-                        FontSize = 11,
-                        Foreground = heightResult.MeetsStandard ?
-                            System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.OrangeRed
+                        Text       = $"  Hauteur {heightResult.WorkPlaneHeight:F2} m : {heightResult.AverageIlluminance:F0} lux (moy), {heightResult.MinIlluminance:F0} lux (min), Uniformité {heightResult.Uniformity:F2}",
+                        Margin     = new Thickness(10, 2, 0, 2),
+                        FontSize   = 11,
+                        Foreground = new SolidColorBrush(hColor)
                     };
                     roomStack.Children.Add(heightText);
                 }
@@ -358,23 +327,23 @@ namespace RevitLightingPlugin.UI
             // Remarks
             if (!string.IsNullOrEmpty(result.Remarques))
             {
+                var rColor = result.MeetsStandard ? SkyLightTheme.GreenOk : SkyLightTheme.RedWarn;
                 var remarksTitle = new TextBlock
                 {
-                    Text = result.MeetsStandard ? "✅ Observations :" : "⚠️ Recommandations :",
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 5),
-                    Foreground = result.MeetsStandard ?
-                        System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.OrangeRed
+                    Text       = result.MeetsStandard ? "✅ Observations :" : "⚠️ Recommandations :",
+                    FontWeight = FontWeights.SemiBold,
+                    Margin     = new Thickness(0, 10, 0, 4),
+                    Foreground = new SolidColorBrush(rColor)
                 };
                 roomStack.Children.Add(remarksTitle);
 
                 var remarksText = new TextBlock
                 {
-                    Text = result.Remarques,
+                    Text         = result.Remarques,
                     TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(10, 0, 0, 0),
-                    FontSize = 11,
-                    Foreground = System.Windows.Media.Brushes.DarkSlateGray
+                    Margin       = new Thickness(10, 0, 0, 0),
+                    FontSize     = 11,
+                    Foreground   = new SolidColorBrush(SkyLightTheme.TextGray)
                 };
                 roomStack.Children.Add(remarksText);
             }
@@ -387,22 +356,27 @@ namespace RevitLightingPlugin.UI
         {
             var panel = new StackPanel
             {
-                Margin = new Thickness(5)
+                Margin     = new Thickness(5),
+                Background = new SolidColorBrush(Color.FromArgb(25, 0, 100, 200))
             };
 
             var labelText = new TextBlock
             {
-                Text = label,
-                FontWeight = FontWeights.Bold,
-                FontSize = 10,
-                Foreground = System.Windows.Media.Brushes.Gray
+                Text       = label,
+                FontWeight = FontWeights.SemiBold,
+                FontSize   = 9,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextGray),
+                Margin     = new Thickness(6, 5, 6, 1)
             };
             panel.Children.Add(labelText);
 
             var valueText = new TextBlock
             {
-                Text = value,
-                FontSize = 12
+                Text       = value,
+                FontSize   = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(SkyLightTheme.TextWhite),
+                Margin     = new Thickness(6, 0, 6, 6)
             };
             panel.Children.Add(valueText);
 

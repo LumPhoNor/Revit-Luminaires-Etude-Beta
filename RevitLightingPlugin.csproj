@@ -62,12 +62,16 @@
     <Reference Include="Microsoft.Extensions.Primitives, Version=5.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.Primitives.5.0.0\lib\net461\Microsoft.Extensions.Primitives.dll</HintPath>
     </Reference>
+    <Reference Include="AdWindows">
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\AdWindows.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2026\RevitAPI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2026\RevitAPIUI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -147,6 +151,7 @@
     <Compile Include="Models\LuminaireInfo.cs" />
     <Compile Include="Models\PhotometricData.cs" />
     <Compile Include="UI\LightingAnalysisWindow.cs" />
+    <Compile Include="UI\SkyLightTheme.cs" />
     <Compile Include="UI\LoadingWindow.cs" />
     <Compile Include="UI\LuminaireCatalogWindow.cs" />
     <Compile Include="UI\ReportConfigWindow.cs" />
@@ -173,7 +178,7 @@
   </Target>
   <Target Name="AfterBuild">
     <PropertyGroup>
-      <AppDataFolder>$(APPDATA)\Autodesk\Revit\Addins\2026</AppDataFolder>
+      <AppDataFolder>$(APPDATA)\Autodesk\Revit\Addins\2024</AppDataFolder>
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(AppDataFolder)" />
     <Copy SourceFiles="$(ProjectDir)RevitLightingPlugin.addin" DestinationFolder="$(AppDataFolder)" />

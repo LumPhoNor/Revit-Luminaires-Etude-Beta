@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
@@ -34,10 +36,8 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeComponent()
         {
+            SkyLightTheme.ApplyDarkWindow(this, 950, 650);
             Title = "Sélection des Pièces - Analyse d'Éclairement";
-            Width = 950; // Augmenté pour la nouvelle colonne
-            Height = 650;
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             var mainGrid = new System.Windows.Controls.Grid();
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -66,7 +66,7 @@ namespace RevitLightingPlugin.UI
             System.Windows.Controls.Grid.SetRow(buttonPanel, 4);
             mainGrid.Children.Add(buttonPanel);
 
-            Content = mainGrid;
+            Content = SkyLightTheme.BuildDarkShell(mainGrid, 920, 620);
         }
 
         private Image CreateLogoImage()
@@ -95,46 +95,10 @@ namespace RevitLightingPlugin.UI
 
         private UIElement CreateHeader()
         {
-            // En-tête : logo fond blanc à gauche + zone titre fond bleu
-            var headerDock = new DockPanel { LastChildFill = true };
-
-            // Zone logo - fond blanc
-            var logoImg = CreateLogoImage();
-            if (logoImg != null)
-            {
-                var logoBorder = new Border
-                {
-                    Background = System.Windows.Media.Brushes.White,
-                    Child = logoImg
-                };
-                DockPanel.SetDock(logoBorder, Dock.Left);
-                headerDock.Children.Add(logoBorder);
-            }
-
-            // Zone titre - fond bleu
-            var titleZone = new StackPanel
-            {
-                Background = System.Windows.Media.Brushes.LightSteelBlue,
-                VerticalAlignment = VerticalAlignment.Stretch
-            };
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "📋 Sélectionnez les pièces et leur type d'activité",
-                FontSize = 18,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(10, 18, 10, 4),
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            titleZone.Children.Add(new TextBlock
-            {
-                Text = "Choisissez le type d'activité pour chaque pièce selon la norme EN 12464-1",
-                FontSize = 12,
-                Margin = new Thickness(10, 0, 10, 12),
-                Foreground = System.Windows.Media.Brushes.DarkSlateGray
-            });
-            headerDock.Children.Add(titleZone);
-
-            return headerDock;
+            return SkyLightTheme.BuildDarkHeader(
+                "Sélection des Pièces",
+                "Choisissez le type d'activité pour chaque pièce (EN 12464-1)",
+                this);
         }
 
         private GroupBox CreateListPanel()

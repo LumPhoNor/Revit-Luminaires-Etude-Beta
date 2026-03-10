@@ -15,18 +15,40 @@ namespace RevitLightingPlugin.Core
     /// </summary>
     public class GridMapGenerator
     {
-        public static string GenerateGridMap(Room room, List<GridPoint> gridPoints, double requiredLux, string outputPath, double gridSpacingMeters = 1.0)
+        public static string GenerateGridMap(Room room, List<GridPoint> gridPoints, double requiredLux, string outputPath, double gridSpacingMeters = 1.0, double wallMarginMeters = 0.0)
         {
             if (gridPoints == null || gridPoints.Count == 0)
                 return null;
 
             try
             {
-                // Calculer les bornes
-                double minX = gridPoints.Min(p => p.X);
-                double maxX = gridPoints.Max(p => p.X);
-                double minY = gridPoints.Min(p => p.Y);
-                double maxY = gridPoints.Max(p => p.Y);
+                // Bornes réelles de la pièce (pour inclure la zone de marge dans l'image)
+                double minX, maxX, minY, maxY;
+                if (room != null && wallMarginMeters > 0.001)
+                {
+                    BoundingBoxXYZ roomBbox = room.get_BoundingBox(null);
+                    if (roomBbox != null)
+                    {
+                        minX = roomBbox.Min.X;
+                        maxX = roomBbox.Max.X;
+                        minY = roomBbox.Min.Y;
+                        maxY = roomBbox.Max.Y;
+                    }
+                    else
+                    {
+                        minX = gridPoints.Min(p => p.X);
+                        maxX = gridPoints.Max(p => p.X);
+                        minY = gridPoints.Min(p => p.Y);
+                        maxY = gridPoints.Max(p => p.Y);
+                    }
+                }
+                else
+                {
+                    minX = gridPoints.Min(p => p.X);
+                    maxX = gridPoints.Max(p => p.X);
+                    minY = gridPoints.Min(p => p.Y);
+                    maxY = gridPoints.Max(p => p.Y);
+                }
 
                 double rangeX = maxX - minX;
                 double rangeY = maxY - minY;
@@ -95,6 +117,26 @@ namespace RevitLightingPlugin.Core
 
                     // Dessiner le contour de la pièce
                     DrawRoomOutline(g, gridLeft, gridRight, gridTop, gridBottom);
+
+                    // Dessiner la marge murale (trait en pointillés orange)
+                    if (wallMarginMeters > 0.001)
+                    {
+                        double wallMarginFeet = wallMarginMeters * 3.28084;
+                        int marginPxX = (int)(wallMarginFeet / rangeX * gridDrawWidth);
+                        int marginPxY = (int)(wallMarginFeet / rangeY * gridDrawHeight);
+                        int mLeft   = gridLeft   + marginPxX;
+                        int mTop    = gridTop    + marginPxY;
+                        int mWidth  = gridDrawWidth  - 2 * marginPxX;
+                        int mHeight = gridDrawHeight - 2 * marginPxY;
+                        if (mWidth > 0 && mHeight > 0)
+                        {
+                            using (Pen marginPen = new Pen(System.Drawing.Color.FromArgb(220, 255, 140, 0), 2))
+                            {
+                                marginPen.DashStyle = DashStyle.Dash;
+                                g.DrawRectangle(marginPen, mLeft, mTop, mWidth, mHeight);
+                            }
+                        }
+                    }
 
                     // Calculer la taille des cellules en pixels
                     double cellWidth = (double)gridDrawWidth / pointsX;
@@ -270,12 +312,14 @@ namespace RevitLightingPlugin.Core
             int barWidth = 30;  // Augmenté de 25 à 30 pour barre plus visible
             int barHeight = 200;
 
-            // Titre de la légende
-            using (Font titleFont = new Font("Arial", 12, FontStyle.Bold))  // Augmenté de 10 à 12
+            // Titre de la légende (une seule ligne centrée au-dessus de la barre)
+            using (Font titleFont = new Font("Arial", 11, FontStyle.Bold))
             using (SolidBrush textBrush = new SolidBrush(System.Drawing.Color.Black))
             {
-                g.DrawString("Éclairement", titleFont, textBrush, legendX, legendY - 30);
-                g.DrawString("(lux)", titleFont, textBrush, legendX, legendY - 12);
+                string legendTitle = "Éclairement (lux)";
+                SizeF titleSize = g.MeasureString(legendTitle, titleFont);
+                float titleX = legendX + (barWidth - titleSize.Width) / 2f;
+                g.DrawString(legendTitle, titleFont, textBrush, titleX, legendY - titleSize.Height - 5);
             }
 
             // Dessiner la barre de gradient verticale

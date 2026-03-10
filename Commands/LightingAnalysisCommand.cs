@@ -140,13 +140,27 @@ namespace RevitLightingPlugin.Commands
                         {
                             RoomName = room.Name,
                             RoomNumber = room.Number,
-                            GridSpacing = settings.GridSpacing
+                            GridSpacing = settings.GridSpacing,
+                            WallMargin = settings.WallMargin
                         };
 
                         Parameter areaParam = room.get_Parameter(BuiltInParameter.ROOM_AREA);
                         if (areaParam != null && areaParam.HasValue)
                         {
                             result.RoomArea = areaParam.AsDouble() * 0.092903;
+                        }
+
+                        // Hauteur sous plafond
+                        Parameter heightParam = room.get_Parameter(BuiltInParameter.ROOM_HEIGHT);
+                        if (heightParam != null && heightParam.HasValue && heightParam.AsDouble() > 0)
+                        {
+                            result.HauteurPiece = heightParam.AsDouble() * 0.3048;
+                        }
+                        else
+                        {
+                            BoundingBoxXYZ roomBbox = room.get_BoundingBox(null);
+                            if (roomBbox != null)
+                                result.HauteurPiece = (roomBbox.Max.Z - roomBbox.Min.Z) * 0.3048;
                         }
 
                         // Ajouter les chemins des images exportées
@@ -175,7 +189,7 @@ namespace RevitLightingPlugin.Commands
                                     try
                                     {
                                         int requiredLux = activityType != null ? activityType.RequiredLux : 500;
-                                        GridMapGenerator.GenerateGridMap(room, lightingResult.GridPoints, requiredLux, gridMapPath, settings.GridSpacing);
+                                        GridMapGenerator.GenerateGridMap(room, lightingResult.GridPoints, requiredLux, gridMapPath, settings.GridSpacing, settings.WallMargin);
                                     }
                                     catch
                                     {
@@ -223,6 +237,7 @@ namespace RevitLightingPlugin.Commands
                                 {
                                     result.LuminaireCount = lightingResult.LuminaireCount;
                                     result.PuissanceTotale = lightingResult.TotalPower;
+                                    result.LuminaireCalculatedHeightMeters = lightingResult.LuminaireCalculatedHeightMeters;
 
                                     if (lightingResult.Luminaires != null)
                                     {

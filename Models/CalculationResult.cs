@@ -136,6 +136,9 @@ namespace RevitLightingPlugin.Models
         // NOUVEAU : Espacement de la grille utilisé
         public double GridSpacing { get; set; }
 
+        // NOUVEAU : Marge murale utilisée pour le calcul (mètres)
+        public double WallMargin { get; set; }
+
         public CalculationResult()
         {
             LuminairesUtilises = new List<LuminaireUsageInfo>();

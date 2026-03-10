@@ -85,8 +85,6 @@ namespace RevitLightingPlugin.Core
                 AddExecutiveSummary(results);
                 pdfDocument.NewPage();
                 foreach (var result in results) { AddRoomDetailedAnalysis(result); pdfDocument.NewPage(); }
-                AddLuminaireCatalog(results);
-                pdfDocument.NewPage();
                 AddEnergyAnalysis(results);
                 pdfDocument.NewPage();
                 AddRecommendations(results);
@@ -144,7 +142,6 @@ namespace RevitLightingPlugin.Core
                 string roomKey = !string.IsNullOrEmpty(r.RoomId) ? r.RoomId : r.RoomName;
                 AddTocEntry(t, "  • " + r.RoomName, "TOC_ROOM_" + roomKey);
             }
-            AddTocEntry(t, "Catalogue des Luminaires", "TOC_CATALOG");
             AddTocEntry(t, "Analyse Énergétique", "TOC_ENERGY");
             AddTocEntry(t, "Recommandations", "TOC_RECOMMENDATIONS");
 
@@ -224,6 +221,28 @@ namespace RevitLightingPlugin.Core
             AddSummaryRow(st, "Surface totale", $"{ts:F2} m²");
             AddSummaryRow(st, "Puissance installée totale", $"{tp:F0} W");
             AddSummaryRow(st, "Densité de puissance moyenne", $"{(ts > 0 ? tp / ts : 0):F2} W/m²");
+
+            // Hauteurs de calcul distinctes sur toutes les pièces
+            var allHeights = results
+                .Where(r => r.HeightResults != null)
+                .SelectMany(r => r.HeightResults.Select(h => h.WorkPlaneHeight))
+                .Distinct()
+                .OrderBy(h => h)
+                .ToList();
+            if (allHeights.Any())
+            {
+                string heightsStr = string.Join(", ", allHeights.Select(h =>
+                    h < 0.01 ? "0,00 m (sol)" : $"{h:F2} m"));
+                AddSummaryRow(st, "Hauteurs de calcul", heightsStr);
+            }
+
+            // Marge murale (prendre la première valeur si toutes identiques, sinon afficher la plage)
+            var margins = results.Select(r => r.WallMargin).Distinct().OrderBy(m => m).ToList();
+            if (margins.Count == 1)
+                AddSummaryRow(st, "Marge murale", $"{margins[0]:F2} m");
+            else if (margins.Count > 1)
+                AddSummaryRow(st, "Marge murale", $"{margins.Min():F2} – {margins.Max():F2} m");
+
             pdfDocument.Add(st);
             pdfDocument.Add(new Paragraph("\n"));
             AddSubsectionTitle("Résultats par pièce");
@@ -257,103 +276,89 @@ namespace RevitLightingPlugin.Core
         {
             string roomKey = !string.IsNullOrEmpty(result.RoomId) ? result.RoomId : result.RoomName;
             RecordSectionPage("TOC_ROOM_" + roomKey);
-            AddSectionTitle($"LUMINAIRES : {result.RoomName}");
 
+            // Hauteurs triées : sol (0,00 m) en premier, puis croissant
+            var sortedHeights = (result.HeightResults ?? new List<HeightAnalysisResult>())
+                .OrderBy(h => h.WorkPlaneHeight)
+                .ToList();
+
+            // ── 1. FICHE TECHNIQUE LUMINAIRE ─────────────────────────────────
+            AddSectionTitle($"LUMINAIRES : {result.RoomName}");
             foreach (var lum in result.LuminairesUtilises)
             {
                 AddLuminaireInfo(lum);
                 pdfDocument.Add(new Paragraph("\n"));
             }
 
-            // ===== PAGE PLEINE : CARTE DE GRILLE 2D =====
-            pdfDocument.NewPage();
-            AddSectionTitle("CARTE DE GRILLE D'ÉCLAIRAGE");
-            pdfDocument.Add(new Paragraph($"Répartition des niveaux d'éclairage - {result.RoomName}\n", normalFont));
-
-            // Afficher la hauteur du plan de travail
-            if (result.HeightResults != null && result.HeightResults.Count > 0)
+            // ── 2. GRILLE + HEATMAP PAR HAUTEUR (sol en premier) ────────────
+            foreach (var hr in sortedHeights)
             {
-                double heightUsed = result.HeightResults[0].WorkPlaneHeight;
-                pdfDocument.Add(new Paragraph($"Hauteur du plan de travail : {heightUsed:F2} m\n", boldFont));
-            }
+                string heightLabel = hr.WorkPlaneHeight < 0.01
+                    ? "Au sol (0,00 m)"
+                    : $"{hr.WorkPlaneHeight:F2} m";
 
-            pdfDocument.Add(new Paragraph($"Espacement de la grille : {result.GridSpacing:F2} m\n\n", italicFont));
-
-            // Ajouter la carte de grille en pleine page
-            if (!string.IsNullOrEmpty(result.GridMapPath) && File.Exists(result.GridMapPath))
-            {
-                try
+                // Carte de grille d'éclairage
+                pdfDocument.NewPage();
+                AddSectionTitle("CARTE DE GRILLE D'ÉCLAIRAGE");
+                pdfDocument.Add(new Paragraph(
+                    $"{result.RoomName}  |  Plan de travail : {heightLabel}  |  Grille : {result.GridSpacing:F2} m\n",
+                    normalFont));
+                if (!string.IsNullOrEmpty(hr.GridMapPath) && File.Exists(hr.GridMapPath))
                 {
-                    iTextSharp.text.Image gridImg = iTextSharp.text.Image.GetInstance(result.GridMapPath);
-                    // Dimensions maximales pour une page A4 (520x720 pour garder des marges)
-                    gridImg.ScaleToFit(520f, 600f);
-                    gridImg.Alignment = PdfElement.ALIGN_CENTER;
-                    pdfDocument.Add(gridImg);
+                    try
+                    {
+                        iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(hr.GridMapPath);
+                        img.ScaleToFit(515f, 660f);
+                        img.Alignment = PdfElement.ALIGN_CENTER;
+                        pdfDocument.Add(img);
+                    }
+                    catch { pdfDocument.Add(new Paragraph("Erreur chargement carte de grille", italicFont)); }
                 }
-                catch { pdfDocument.Add(new Paragraph("Erreur chargement carte de grille", italicFont)); }
-            }
-            else
-            {
-                pdfDocument.Add(new Paragraph("Carte de grille non disponible", italicFont));
-            }
-
-            // ===== PAGE PLEINE : CARTE THERMIQUE 3D =====
-            pdfDocument.NewPage();
-            AddSectionTitle("CARTE THERMIQUE 3D");
-            pdfDocument.Add(new Paragraph($"Visualisation 3D de la distribution des niveaux d'éclairage - {result.RoomName}\n", normalFont));
-
-            // Afficher la hauteur du plan de travail
-            if (result.HeightResults != null && result.HeightResults.Count > 0)
-            {
-                double heightUsed = result.HeightResults[0].WorkPlaneHeight;
-                pdfDocument.Add(new Paragraph($"Hauteur du plan de travail : {heightUsed:F2} m\n\n", boldFont));
-            }
-            else
-            {
-                pdfDocument.Add(new Paragraph("\n"));
-            }
-
-            // Ajouter le heatmap 3D en pleine page (récupéré de la première hauteur s'il y en a plusieurs)
-            string heatmap3DPath = null;
-            if (result.HeightResults != null && result.HeightResults.Count > 0)
-            {
-                heatmap3DPath = result.HeightResults[0].Heatmap3DPath;
-            }
-
-            if (!string.IsNullOrEmpty(heatmap3DPath) && File.Exists(heatmap3DPath))
-            {
-                try
+                else
                 {
-                    iTextSharp.text.Image heatmapImg = iTextSharp.text.Image.GetInstance(heatmap3DPath);
-                    // Dimensions maximales pour une page A4 (520x720 pour garder des marges)
-                    heatmapImg.ScaleToFit(520f, 600f);
-                    heatmapImg.Alignment = PdfElement.ALIGN_CENTER;
-                    pdfDocument.Add(heatmapImg);
+                    pdfDocument.Add(new Paragraph("Carte de grille non disponible", italicFont));
                 }
-                catch { pdfDocument.Add(new Paragraph("Erreur chargement carte thermique 3D", italicFont)); }
-            }
-            else
-            {
-                pdfDocument.Add(new Paragraph("Carte thermique 3D non disponible", italicFont));
+
+                // Carte thermique 3D
+                pdfDocument.NewPage();
+                AddSectionTitle("CARTE THERMIQUE 3D");
+                pdfDocument.Add(new Paragraph(
+                    $"{result.RoomName}  |  Plan de travail : {heightLabel}\n",
+                    normalFont));
+                if (!string.IsNullOrEmpty(hr.Heatmap3DPath) && File.Exists(hr.Heatmap3DPath))
+                {
+                    try
+                    {
+                        iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(hr.Heatmap3DPath);
+                        img.ScaleToFit(515f, 610f);
+                        img.Alignment = PdfElement.ALIGN_CENTER;
+                        pdfDocument.Add(img);
+                    }
+                    catch { pdfDocument.Add(new Paragraph("Erreur chargement carte thermique 3D", italicFont)); }
+                }
+                else
+                {
+                    pdfDocument.Add(new Paragraph("Carte thermique 3D non disponible", italicFont));
+                }
             }
 
-            // ===== PAGE : VUES DE LA PIÈCE =====
+            // ── 3. VUES DE LA PIÈCE ──────────────────────────────────────────
             pdfDocument.NewPage();
             AddSectionTitle("VUES DE LA PIÈCE");
             pdfDocument.Add(new Paragraph($"Vues 2D et 3D avec luminaires - {result.RoomName}\n\n", normalFont));
             AddRoomViews(result);
-            pdfDocument.NewPage();
 
+            // ── 4. ANALYSE ───────────────────────────────────────────────────
+            pdfDocument.NewPage();
             AddSectionTitle($"ANALYSE : {result.RoomName}");
+
             AddSubsectionTitle("Caractéristiques de la pièce");
             PdfPTable ct = new PdfPTable(2) { WidthPercentage = 100 };
             ct.SetWidths(new float[] { 3f, 2f });
             AddSummaryRow(ct, "Surface", $"{result.RoomArea:F2} m²");
             AddSummaryRow(ct, "Hauteur sous plafond", $"{result.HauteurPiece:F2} m");
             if (result.LuminaireCalculatedHeightMeters > 0)
-            {
-                AddSummaryRow(ct, "Hauteur source lumineuse", $"{result.LuminaireCalculatedHeightMeters:F2} m");
-            }
+                AddSummaryRow(ct, "Hauteur de pose des luminaires", $"{result.LuminaireCalculatedHeightMeters:F2} m");
             AddSummaryRow(ct, "Norme appliquée", $"{result.TypeActivite} - {result.EclairementRequis:F0} lux");
             pdfDocument.Add(ct);
             pdfDocument.Add(new Paragraph("\n"));
@@ -366,89 +371,57 @@ namespace RevitLightingPlugin.Core
             pdfDocument.Add(req);
             pdfDocument.Add(new Paragraph("\n"));
 
-            // Afficher les résultats par hauteur si plusieurs hauteurs
-            if (result.HeightResults != null && result.HeightResults.Count > 1)
+            // Résultats par hauteur (sol en premier)
+            if (sortedHeights.Count > 0)
             {
-                AddSubsectionTitle("Résultats par hauteur de plan de travail");
-
-                foreach (var heightResult in result.HeightResults)
+                foreach (var hr in sortedHeights)
                 {
-                    pdfDocument.Add(new Paragraph($"\n➤ Hauteur {heightResult.WorkPlaneHeight:F2} m\n", boldFont));
+                    string heightLabel = hr.WorkPlaneHeight < 0.01
+                        ? "Au sol (0,00 m)"
+                        : $"{hr.WorkPlaneHeight:F2} m";
+                    pdfDocument.Add(new Paragraph($"\n➤ Plan de travail : {heightLabel}", boldFont));
+                    if (result.WallMargin > 0.001)
+                        pdfDocument.Add(new Paragraph($"   Marge murale : {result.WallMargin:F2} m", normalFont) { SpacingAfter = 2f });
+                    pdfDocument.Add(new Paragraph(" ", normalFont) { SpacingAfter = 6f });
 
                     PdfPTable htable = new PdfPTable(3) { WidthPercentage = 100 };
                     htable.SetWidths(new float[] { 3f, 2f, 1f });
                     htable.AddCell(CreateTableHeader("Paramètre"));
                     htable.AddCell(CreateTableHeader("Valeur mesurée"));
                     htable.AddCell(CreateTableHeader("Statut"));
-                    AddResultRow(htable, "Éclairement moyen", $"{heightResult.AverageIlluminance:F0} lux", heightResult.AverageIlluminance >= result.EclairementRequis);
-                    AddResultRow(htable, "Éclairement minimum", $"{heightResult.MinIlluminance:F0} lux", true);
-                    AddResultRow(htable, "Éclairement maximum", $"{heightResult.MaxIlluminance:F0} lux", true);
-                    AddResultRow(htable, "Uniformité globale (U₀)", $"{heightResult.Uniformity:F2}", heightResult.Uniformity >= result.UniformiteRequise);
-                    // P4: Uniformité locale pour chaque hauteur
-                    AddResultRow(htable, "Uniformité locale (Uₕ)", $"{heightResult.LocalUniformity:F2}", heightResult.LocalUniformity >= 0.60);
+                    AddResultRow(htable, "Éclairement moyen",    $"{hr.AverageIlluminance:F0} lux", hr.AverageIlluminance >= result.EclairementRequis);
+                    AddResultRow(htable, "Éclairement minimum",  $"{hr.MinIlluminance:F0} lux",     true);
+                    AddResultRow(htable, "Éclairement maximum",  $"{hr.MaxIlluminance:F0} lux",     true);
+                    AddResultRow(htable, "Uniformité globale (U₀)", $"{hr.Uniformity:F2}",          hr.Uniformity >= result.UniformiteRequise);
+                    AddResultRow(htable, "Uniformité locale (Uₕ)",  $"{hr.LocalUniformity:F2}",     hr.LocalUniformity >= 0.60);
                     pdfDocument.Add(htable);
-
-                    // Grille 2D en pleine page pour cette hauteur
-                    if (!string.IsNullOrEmpty(heightResult.GridMapPath) && File.Exists(heightResult.GridMapPath))
-                    {
-                        try
-                        {
-                            pdfDocument.NewPage();
-                            AddSectionTitle($"GRILLE 2D - Hauteur {heightResult.WorkPlaneHeight:F2} m");
-                            pdfDocument.Add(new Paragraph($"{result.RoomName}\n\n", normalFont));
-                            iTextSharp.text.Image hGridImg = iTextSharp.text.Image.GetInstance(heightResult.GridMapPath);
-                            hGridImg.ScaleToFit(520f, 600f);
-                            hGridImg.Alignment = PdfElement.ALIGN_CENTER;
-                            pdfDocument.Add(hGridImg);
-                        }
-                        catch { }
-                    }
-
-                    // Heatmap 3D en pleine page pour cette hauteur
-                    if (!string.IsNullOrEmpty(heightResult.Heatmap3DPath) && File.Exists(heightResult.Heatmap3DPath))
-                    {
-                        try
-                        {
-                            pdfDocument.NewPage();
-                            AddSectionTitle($"HEATMAP 3D - Hauteur {heightResult.WorkPlaneHeight:F2} m");
-                            pdfDocument.Add(new Paragraph($"{result.RoomName}\n\n", normalFont));
-                            iTextSharp.text.Image heatmap3DImg = iTextSharp.text.Image.GetInstance(heightResult.Heatmap3DPath);
-                            heatmap3DImg.ScaleToFit(520f, 600f);
-                            heatmap3DImg.Alignment = PdfElement.ALIGN_CENTER;
-                            pdfDocument.Add(heatmap3DImg);
-                        }
-                        catch { }
-                    }
-
-                    // Icône conformité
-                    PdfFont conformFont = new PdfFont(boldFont.BaseFont, 12, PdfFont.BOLD, heightResult.MeetsStandard ? successColor : dangerColor);
-                    pdfDocument.Add(new Paragraph(heightResult.MeetsStandard ? "\n✓ Conforme" : "\n✗ Non conforme", conformFont));
                     pdfDocument.Add(new Paragraph("\n"));
                 }
             }
             else
             {
-                // Affichage classique pour une seule hauteur
+                // Fallback : aucun HeightResult (cas sans calcul multi-hauteur)
                 PdfPTable res = new PdfPTable(3) { WidthPercentage = 100 };
                 res.SetWidths(new float[] { 3f, 2f, 1f });
                 res.AddCell(CreateTableHeader("Paramètre"));
                 res.AddCell(CreateTableHeader("Valeur mesurée"));
                 res.AddCell(CreateTableHeader("Statut"));
-                AddResultRow(res, "Éclairement moyen", $"{result.AverageIlluminance:F0} lux", result.AverageIlluminance >= result.EclairementRequis);
-                AddResultRow(res, "Éclairement minimum", $"{result.MinIlluminance:F0} lux", true);
-                AddResultRow(res, "Éclairement maximum", $"{result.MaxIlluminance:F0} lux", true);
-                AddResultRow(res, "Uniformité globale (U₀)", $"{result.Uniformity:F2}", result.Uniformity >= result.UniformiteRequise);
-                // P4: Affichage uniformité locale selon EN 12464-1 section 4.3
-                AddResultRow(res, "Uniformité locale (Uₕ)", $"{result.LocalUniformity:F2}", result.LocalUniformity >= 0.60);
+                AddResultRow(res, "Éclairement moyen",    $"{result.AverageIlluminance:F0} lux", result.AverageIlluminance >= result.EclairementRequis);
+                AddResultRow(res, "Éclairement minimum",  $"{result.MinIlluminance:F0} lux",     true);
+                AddResultRow(res, "Éclairement maximum",  $"{result.MaxIlluminance:F0} lux",     true);
+                AddResultRow(res, "Uniformité globale (U₀)", $"{result.Uniformity:F2}",          result.Uniformity >= result.UniformiteRequise);
+                AddResultRow(res, "Uniformité locale (Uₕ)",  $"{result.LocalUniformity:F2}",     result.LocalUniformity >= 0.60);
                 pdfDocument.Add(res);
                 pdfDocument.Add(new Paragraph("\n"));
             }
 
-            AddSubsectionTitle("Données énergétiques");
+            pdfDocument.NewPage();
+            AddSectionTitle("DONNÉES ÉNERGÉTIQUES");
+            pdfDocument.Add(new Paragraph($"{result.RoomName}\n\n", normalFont));
             PdfPTable et = new PdfPTable(2) { WidthPercentage = 100 };
             et.SetWidths(new float[] { 3f, 2f });
-            AddSummaryRow(et, "Puissance installée", $"{result.PuissanceTotale:F0} W");
-            AddSummaryRow(et, "Densité de puissance", $"{result.DensitePuissance:F2} W/m²");
+            AddSummaryRow(et, "Puissance installée",   $"{result.PuissanceTotale:F0} W");
+            AddSummaryRow(et, "Densité de puissance",  $"{result.DensitePuissance:F2} W/m²");
             pdfDocument.Add(et);
         }
 
@@ -465,7 +438,7 @@ namespace RevitLightingPlugin.Core
                     try
                     {
                         iTextSharp.text.Image planImg = iTextSharp.text.Image.GetInstance(result.PlanImagePath);
-                        planImg.ScaleToFit(520f, 600f);
+                        planImg.ScaleToFit(515f, 500f);
                         planImg.Alignment = PdfElement.ALIGN_CENTER;
                         pdfDocument.Add(planImg);
                     }
@@ -486,7 +459,7 @@ namespace RevitLightingPlugin.Core
                     try
                     {
                         iTextSharp.text.Image view3DImg = iTextSharp.text.Image.GetInstance(result.View3DImagePath);
-                        view3DImg.ScaleToFit(520f, 600f);
+                        view3DImg.ScaleToFit(515f, 550f);
                         view3DImg.Alignment = PdfElement.ALIGN_CENTER;
                         pdfDocument.Add(view3DImg);
                     }

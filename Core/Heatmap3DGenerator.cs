@@ -19,8 +19,8 @@ namespace RevitLightingPlugin.Core
             string roomName,
             double requiredLux,
             string outputPath,
-            int imgWidth = 1600,
-            int imgHeight = 1200)
+            int imgWidth = 1200,
+            int imgHeight = 1600)
         {
             if (gridPoints == null || gridPoints.Count == 0)
                 return null;
@@ -39,37 +39,40 @@ namespace RevitLightingPlugin.Core
                 double gridWidth = maxX - minX;
                 double gridHeight = maxY - minY;
 
-                // Normalisation de la hauteur (max ~80px pour la hauteur max)
+                // Normalisation de la hauteur (max ~120px pour la hauteur max)
                 double maxLux = gridPoints.Max(p => p.Illuminance);
-                double heightScale = maxLux > 0 ? 80.0 / maxLux : 0;
-                double maxHeight = maxLux * heightScale;
+                double maxHeight = 120.0; // en pixels — indépendant des unités monde
+                double heightScale = maxLux > 0 ? maxHeight / maxLux : 0;
 
-                // Échelle pour que la grille rentre dans l'image avec marges
-                int marginX = 200;
-                int marginY = 120;
+                // Marges et espaces réservés
+                int marginX = 150;
+                int marginY = 80;
                 int titleSpace = 100;
                 int legendSpace = 200; // Espace pour la légende à droite
 
                 int availableWidth = imgWidth - 2 * marginX - legendSpace;
                 int availableHeight = imgHeight - 2 * marginY - titleSpace;
 
-                // Calculer l'échelle isométrique
+                // Calculer l'échelle isométrique — maxHeight est en pixels, ne pas l'inclure ici
                 double projectedWidth = (gridWidth + gridHeight) * cosA;
-                double projectedHeight = (gridWidth + gridHeight) * sinA + maxHeight;
+                double projectedHeightBase = (gridWidth + gridHeight) * sinA;
 
+                // Réserver maxHeight pixels pour le relief vertical de la surface
                 double scaleX = availableWidth / (projectedWidth > 0 ? projectedWidth : 1);
-                double scaleY = availableHeight / (projectedHeight > 0 ? projectedHeight : 1);
+                double scaleY = (availableHeight - maxHeight) / (projectedHeightBase > 0 ? projectedHeightBase : 1);
 
                 // Utiliser l'échelle la plus petite pour respecter les proportions
                 double scale = Math.Min(scaleX, scaleY);
 
-                // Calculer la taille réelle du contenu projeté
-                double actualWidth = projectedWidth * scale;
-                double actualHeight = projectedHeight * scale;
+                // Dimensions réelles du plan de base projeté (en pixels)
+                double actualBaseWidth = projectedWidth * scale;
+                double actualBaseHeight = projectedHeightBase * scale;
 
-                // Centrer le contenu dans l'espace disponible
-                int centerX = marginX + (int)((availableWidth - actualWidth) / 2 + actualWidth / 2);
-                int centerY = titleSpace + marginY + (int)((availableHeight - actualHeight) / 2 + actualHeight / 2);
+                // Centrer correctement la projection isométrique (forme en losange)
+                // L'axe Y projette à gauche, l'axe X projette à droite
+                int centerX = marginX + (int)((availableWidth - actualBaseWidth) / 2 + gridHeight * cosA * scale);
+                // Le relief monte au-dessus de centerY (−maxHeight) et la base descend en dessous (+actualBaseHeight)
+                int centerY = titleSpace + marginY + (int)((availableHeight - (actualBaseHeight + maxHeight)) / 2 + maxHeight);
 
                 using (Bitmap bitmap = new Bitmap(imgWidth, imgHeight))
                 using (Graphics g = Graphics.FromImage(bitmap))
