@@ -22,6 +22,11 @@ namespace RevitLightingPlugin.UI
         public const string LogoV21Path =
             @"C:\Users\User\Documents\Projets Plugin\Logo\Nouveau icone Skylightning.png";
 
+        // Version recadrée (marge grise retirée) : le dessin remplit mieux les
+        // petites icônes du ruban Revit (32/16 px), où le logo complet paraissait minuscule.
+        public const string LogoRibbonIconPath =
+            @"C:\Users\User\Documents\Projets Plugin\Logo\Nouveau icone Skylightning - Ruban.png";
+
         // ── Palette gris neutre (aspect Revit) ───────────────────────────────
         // Fonds fenêtres
         public static readonly Color NavyDark  = Color.FromRgb(245, 246, 248);  // fond principal

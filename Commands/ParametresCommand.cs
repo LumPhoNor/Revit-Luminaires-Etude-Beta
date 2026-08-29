@@ -64,6 +64,8 @@ namespace RevitLightingPlugin.Commands
                     $"Session sauvegardée : {selectedRooms.Count} pièce(s), " +
                     $"grille={analysisWin.Settings.GridSpacing}m");
 
+                RevitLightingPlugin.Application.SetCalculReady(true);
+
                 TaskDialog.Show("Skylightning — Paramètres",
                     $"Configuration enregistrée pour {selectedRooms.Count} pièce(s).\n\n" +
                     "Cliquez sur « Calcul » pour lancer l'analyse.");

@@ -12,6 +12,19 @@ namespace RevitLightingPlugin
     public class Application : IExternalApplication
     {
         private const string TabName = "Skylightning";
+        private static PushButton _calculButton;
+
+        /// <summary>
+        /// Met à jour l'icône du bouton Calcul : éclair vide (gris) si le paramétrage
+        /// n'est pas fait, ou rempli en bleu une fois qu'il l'est. Appelé par
+        /// ParametresCommand une fois la configuration enregistrée.
+        /// </summary>
+        public static void SetCalculReady(bool ready)
+        {
+            if (_calculButton == null) return;
+            _calculButton.LargeImage = CreateCalcIconLarge(ready);
+            _calculButton.Image      = CreateCalcIcon(ready);
+        }
 
         public Result OnStartup(UIControlledApplication application)
         {
@@ -28,12 +41,7 @@ namespace RevitLightingPlugin
                 RibbonPanel panel = application.CreateRibbonPanel(TabName, "Skylightning");
                 string assemblyPath = Assembly.GetExecutingAssembly().Location;
 
-                // PNG logo (chargé via MemoryStream — centré dans 32×32)
-                var pngLarge = LoadButtonIcon(32);
-                var pngSmall = LoadButtonIcon(16);
-                Logger.Info("Application", $"PNG logo : {pngLarge?.PixelWidth}×{pngLarge?.PixelHeight} px");
-
-                // ── Bouton PARAMÈTRES (grand — logo PNG centré) ───────────────
+                // ── Bouton PARAMÈTRES (roue dentée bleue) ─────────────────────
                 var parametresData = new PushButtonData(
                     "SkylightningParametres",
                     "Paramètres",
@@ -41,11 +49,12 @@ namespace RevitLightingPlugin
                     "RevitLightingPlugin.Commands.ParametresCommand")
                 {
                     ToolTip    = "Configure les pièces, l'analyse et les vues",
-                    LargeImage = pngLarge,
-                    Image      = pngSmall
+                    LargeImage = CreateGearIconLarge(),
+                    Image      = CreateGearIcon()
                 };
 
-                // ── Bouton CALCUL (grand) ─────────────────────────────────────
+                // ── Bouton CALCUL (éclair — vide tant que le paramétrage n'est
+                //    pas fait, se remplit en bleu une fois configuré) ─────────
                 var calculData = new PushButtonData(
                     "SkylightningCalcul",
                     "Calcul",
@@ -53,11 +62,11 @@ namespace RevitLightingPlugin
                     "RevitLightingPlugin.Commands.CalculCommand")
                 {
                     ToolTip    = "Lance le calcul d'éclairement",
-                    LargeImage = CreateCalcIconLarge(),
-                    Image      = CreateCalcIcon()
+                    LargeImage = CreateCalcIconLarge(false),
+                    Image      = CreateCalcIcon(false)
                 };
 
-                // ── Bouton À PROPOS ⓘ (grand) ─────────────────────────────────
+                // ── Bouton À PROPOS ⓘ (icône réduite) ─────────────────────────
                 var aboutData = new PushButtonData(
                     "SkylightningAbout",
                     "À propos",
@@ -69,10 +78,10 @@ namespace RevitLightingPlugin
                     Image      = CreateInfoIcon()
                 };
 
-                // Layout : [Paramètres (grand)] │ [Calcul (grand)] │ [À propos (grand)]
+                // Layout : [Paramètres] │ [Calcul] │ [À propos]
                 panel.AddItem(parametresData);
                 panel.AddSeparator();
-                panel.AddItem(calculData);
+                _calculButton = panel.AddItem(calculData) as PushButton;
                 panel.AddSeparator();
                 panel.AddItem(aboutData);
 
@@ -98,7 +107,9 @@ namespace RevitLightingPlugin
         {
             try
             {
-                string path = SkylightningTheme.LogoV21Path;
+                string path = File.Exists(SkylightningTheme.LogoRibbonIconPath)
+                    ? SkylightningTheme.LogoRibbonIconPath
+                    : SkylightningTheme.LogoV21Path;
                 if (!File.Exists(path))
                 {
                     Logger.Warning("Application", $"PNG introuvable : {path}");
@@ -151,42 +162,19 @@ namespace RevitLightingPlugin
             return rtb;
         }
 
-        // ── Icône Calcul : éclair bleu (16px) ────────────────────────────────
-        private static BitmapSource CreateCalcIcon()
-        {
-            var dv = new System.Windows.Media.DrawingVisual();
-            using (var dc = dv.RenderOpen())
-            {
-                var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216)); // #1D4ED8
-                var geom = new System.Windows.Media.StreamGeometry();
-                using (var ctx = geom.Open())
-                {
-                    ctx.BeginFigure(new System.Windows.Point(10, 1), true, true);
-                    ctx.LineTo(new System.Windows.Point(5,  8), true, false);
-                    ctx.LineTo(new System.Windows.Point(9,  8), true, false);
-                    ctx.LineTo(new System.Windows.Point(4, 15), true, false);
-                    ctx.LineTo(new System.Windows.Point(13, 7), true, false);
-                    ctx.LineTo(new System.Windows.Point(9,  7), true, false);
-                }
-                geom.Freeze();
-                dc.DrawGeometry(blue, null, geom);
-            }
-            var rtb = new RenderTargetBitmap(16, 16, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(dv);
-            rtb.Freeze();
-            return rtb;
-        }
+        // ── Icône Calcul : éclair (16px). Gris/vide tant que le paramétrage
+        //    n'est pas fait, bleu rempli une fois configuré. ──────────────────
+        private static BitmapSource CreateCalcIcon(bool ready) => BuildCalcIcon(16, ready);
 
         // ── Icône Calcul grand (32px) ─────────────────────────────────────────
-        private static BitmapSource CreateCalcIconLarge() => BuildCalcIcon(32);
+        private static BitmapSource CreateCalcIconLarge(bool ready) => BuildCalcIcon(32, ready);
 
-        private static BitmapSource BuildCalcIcon(int size)
+        private static BitmapSource BuildCalcIcon(int size, bool ready)
         {
             double s = size;
             var dv = new System.Windows.Media.DrawingVisual();
             using (var dc = dv.RenderOpen())
             {
-                var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216));
                 var geom = new System.Windows.Media.StreamGeometry();
                 using (var ctx = geom.Open())
                 {
@@ -199,7 +187,69 @@ namespace RevitLightingPlugin
                     ctx.LineTo(new System.Windows.Point(s*0.56, s*0.44), true, false);
                 }
                 geom.Freeze();
-                dc.DrawGeometry(blue, null, geom);
+
+                if (ready)
+                {
+                    var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216)); // #1D4ED8
+                    dc.DrawGeometry(blue, null, geom);
+                }
+                else
+                {
+                    var gray = new SolidColorBrush(Color.FromRgb(156, 163, 175)); // gris neutre
+                    var outlinePen = new System.Windows.Media.Pen(gray, Math.Max(1.0, s * 0.06));
+                    dc.DrawGeometry(null, outlinePen, geom);
+                }
+            }
+            var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
+        }
+
+        // ── Icône Paramètres : roue dentée bleue ──────────────────────────────
+        private static BitmapSource CreateGearIcon()      => BuildGearIcon(16);
+        private static BitmapSource CreateGearIconLarge() => BuildGearIcon(32);
+
+        private static BitmapSource BuildGearIcon(int size)
+        {
+            double s  = size;
+            double cx = s / 2.0, cy = s / 2.0;
+            double rBody  = s * 0.30; // rayon du corps circulaire (base des dents)
+            double rOuter = s * 0.42; // rayon jusqu'au sommet des dents
+            double rInner = s * 0.15; // rayon du trou central
+            double toothW = s * 0.14;
+            double toothH = rOuter - rBody;
+            const int teethCount = 8;
+
+            var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216)); // #1D4ED8
+
+            var body = new System.Windows.Media.EllipseGeometry(new System.Windows.Point(cx, cy), rBody, rBody);
+            var teethGroup = new System.Windows.Media.GeometryGroup { FillRule = System.Windows.Media.FillRule.Nonzero };
+
+            for (int i = 0; i < teethCount; i++)
+            {
+                double angle = i * (360.0 / teethCount);
+                var rect = new System.Windows.Media.RectangleGeometry(
+                    new System.Windows.Rect(-toothW / 2, -(rBody + toothH), toothW, toothH + 2));
+
+                var transform = new System.Windows.Media.TransformGroup();
+                transform.Children.Add(new System.Windows.Media.RotateTransform(angle));
+                transform.Children.Add(new System.Windows.Media.TranslateTransform(cx, cy));
+                rect.Transform = transform;
+
+                teethGroup.Children.Add(rect);
+            }
+
+            var gearOutline = new System.Windows.Media.CombinedGeometry(
+                System.Windows.Media.GeometryCombineMode.Union, body, teethGroup);
+            var hole = new System.Windows.Media.EllipseGeometry(new System.Windows.Point(cx, cy), rInner, rInner);
+            var finalGear = new System.Windows.Media.CombinedGeometry(
+                System.Windows.Media.GeometryCombineMode.Exclude, gearOutline, hole);
+
+            var dv = new System.Windows.Media.DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                dc.DrawGeometry(blue, null, finalGear);
             }
             var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
             rtb.Render(dv);
@@ -221,7 +271,7 @@ namespace RevitLightingPlugin
                 var blue  = new SolidColorBrush(Color.FromRgb( 29,  78, 216)); // #1D4ED8
                 var white = new SolidColorBrush(Color.FromRgb(255, 255, 255));
                 dc.DrawEllipse(blue, null,
-                    new System.Windows.Point(cx, cx), s * 0.45, s * 0.45);
+                    new System.Windows.Point(cx, cx), s * 0.36, s * 0.36); // réduit (avant : 0.45)
                 var tf = new System.Windows.Media.Typeface(
                     new System.Windows.Media.FontFamily("Arial"),
                     System.Windows.FontStyles.Normal,
@@ -232,7 +282,7 @@ namespace RevitLightingPlugin
                     "i",
                     System.Globalization.CultureInfo.InvariantCulture,
                     System.Windows.FlowDirection.LeftToRight,
-                    tf, s * 0.58, white);
+                    tf, s * 0.48, white); // réduit proportionnellement (avant : 0.58)
 #pragma warning restore CS0618
                 dc.DrawText(ft,
                     new System.Windows.Point(cx - ft.Width / 2, cx - ft.Height / 2 - s * 0.02));

@@ -80,6 +80,7 @@ namespace RevitLightingPlugin.Commands
                         var roomSw = Stopwatch.StartNew();
                         Logger.Info("CalculCmd", $"📊 Pièce : {room.Name} ({room.Number})");
                         loadingWindow?.SetStatus($"Analyse : {room.Name}");
+                        loadingWindow?.SetProgress(0); // ampoule vide : nouvelle pièce
 
                         try
                         {
@@ -117,10 +118,30 @@ namespace RevitLightingPlugin.Commands
 
                             result.HeightResults = new List<HeightAnalysisResult>();
 
+                            int totalHeightsForRoom = Math.Max(1, settings.WorkPlaneHeights.Count);
+                            int heightsDoneForRoom = 0;
+
+                            // Estimation grossière de la durée du calcul (nb de points de grille),
+                            // pour animer l'ampoule PENDANT le calcul plutôt que d'attendre sa fin.
+                            // Ajuster le facteur ci-dessous si le remplissage est trop rapide/lent
+                            // par rapport à la durée réelle observée.
+                            double estimatedGridPoints = (result.RoomArea > 0 && settings.GridSpacing > 0)
+                                ? result.RoomArea / (settings.GridSpacing * settings.GridSpacing)
+                                : 50;
+                            double estimatedSeconds = Math.Max(1.0, Math.Min(12.0, estimatedGridPoints * 0.05));
+
                             foreach (double height in settings.WorkPlaneHeights)
                             {
+                                double targetFraction = (double)(heightsDoneForRoom + 1) / totalHeightsForRoom;
+                                loadingWindow?.AnimateProgressTo(targetFraction, TimeSpan.FromSeconds(estimatedSeconds));
+
                                 var lr = calculator.CalculateForRoom(room, settings, height);
-                                if (lr == null) continue;
+                                if (lr == null)
+                                {
+                                    heightsDoneForRoom++;
+                                    loadingWindow?.SetProgress((double)heightsDoneForRoom / totalHeightsForRoom);
+                                    continue;
+                                }
 
                                 string gridMapPath  = null;
                                 string heatmap3DPath = null;
@@ -179,6 +200,9 @@ namespace RevitLightingPlugin.Commands
 
                                 Logger.Info("CalculCmd",
                                     $"  ✅ h={height:F2}m => Em={lr.AverageIlluminance:F0} lux");
+
+                                heightsDoneForRoom++;
+                                loadingWindow?.SetProgress((double)heightsDoneForRoom / totalHeightsForRoom);
                             }
 
                             if (result.HeightResults.Count > 0)
@@ -239,6 +263,8 @@ namespace RevitLightingPlugin.Commands
                             TaskDialog.Show("Erreur de calcul",
                                 $"Erreur pour la pièce {room.Name} :\n{ex.Message}");
                         }
+
+                        loadingWindow?.SetProgress(1); // ampoule pleine : pièce terminée
                     }
 
                     // Nettoyage vues temporaires

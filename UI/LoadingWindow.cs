@@ -8,6 +8,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using ShapePath = System.Windows.Shapes.Path;
 
 namespace RevitLightingPlugin.UI
 {
@@ -18,12 +19,19 @@ namespace RevitLightingPlugin.UI
     public class LoadingWindow : Window
     {
         private TextBlock _statusText;
+        private ShapePath _bulbFillPath;
+        private RectangleGeometry _bulbClip;
 
         private const string LogoPath =
             @"C:\Users\User\Documents\Projets Plugin\Logo\Logo symbole V3 sans fond .jpg";
 
-        private const double HoloW = 340;
-        private const double HoloH = 320;
+        // Icône ampoule (Material Design "lightbulb", viewBox 24x24)
+        private const string BulbGeometryData =
+            "M9,21c0,0.55,0.45,1,1,1h4c0.55,0,1-0.45,1-1v-1H9V21z " +
+            "M12,2C8.14,2,5,5.14,5,9c0,2.38,1.19,4.47,3,5.74V17c0,0.55,0.45,1,1,1h6 " +
+            "c0.55,0,1-0.45,1-1v-2.26c1.81-1.27,3-3.36,3-5.74C19,5.14,15.86,2,12,2z";
+
+        private const double BulbSize = 20;
 
         public LoadingWindow()
         {
@@ -67,12 +75,11 @@ namespace RevitLightingPlugin.UI
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             mainBorder.Child = root;
 
-            // ── Logo centré ──────────────────────────────────────────────────
+            // ── Logo occupant toute la zone disponible de la fenêtre ────────────
             var logoArea = new Grid
             {
-                Width               = HoloW,
-                Height              = HoloH,
-                HorizontalAlignment = HorizontalAlignment.Center
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment   = VerticalAlignment.Stretch
             };
             logoArea.Children.Add(BuildLogoImage());
 
@@ -87,20 +94,128 @@ namespace RevitLightingPlugin.UI
                 Background      = new SolidColorBrush(Color.FromRgb(235, 237, 241)),
                 Padding         = new Thickness(15, 10, 15, 14)
             };
+            var statusContent = new StackPanel
+            {
+                Orientation         = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            statusContent.Children.Add(BuildProgressBulb());
+
             _statusText = new TextBlock
             {
                 Text                = "Initialisation...",
                 FontSize            = 12,
                 FontWeight          = FontWeights.SemiBold,
                 Foreground          = new SolidColorBrush(Color.FromRgb(55, 65, 81)),
-                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment   = VerticalAlignment.Center,
                 TextAlignment       = TextAlignment.Center
             };
-            statusBar.Child = _statusText;
+            statusContent.Children.Add(_statusText);
+
+            statusBar.Child = statusContent;
             Grid.SetRow(statusBar, 1);
             root.Children.Add(statusBar);
 
             Content = mainBorder;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        //  Ampoule de progression (devant le titre de la pièce)
+        // ─────────────────────────────────────────────────────────────────────
+
+        private UIElement BuildProgressBulb()
+        {
+            Geometry geometry = Geometry.Parse(BulbGeometryData);
+            geometry.Freeze();
+
+            var outline = new ShapePath
+            {
+                Data    = geometry,
+                Fill    = new SolidColorBrush(Color.FromRgb(209, 213, 219)), // gris clair : ampoule vide
+                Stretch = Stretch.Uniform,
+                Width   = BulbSize,
+                Height  = BulbSize
+            };
+
+            _bulbClip = new RectangleGeometry(RectForFraction(0)); // rien de rempli au départ
+
+            _bulbFillPath = new ShapePath
+            {
+                Data    = geometry,
+                Fill    = new SolidColorBrush(Color.FromRgb(29, 78, 216)), // bleu Skylightning (#1D4ED8)
+                Stretch = Stretch.Uniform,
+                Width   = BulbSize,
+                Height  = BulbSize,
+                Clip    = _bulbClip
+            };
+
+            var container = new Grid
+            {
+                Width               = BulbSize,
+                Height              = BulbSize,
+                Margin              = new Thickness(0, 0, 8, 0),
+                VerticalAlignment   = VerticalAlignment.Center
+            };
+            container.Children.Add(outline);
+            container.Children.Add(_bulbFillPath);
+            return container;
+        }
+
+        private static Rect RectForFraction(double fraction)
+        {
+            fraction = Math.Max(0, Math.Min(1, fraction));
+            double filledHeight = BulbSize * fraction;
+            return new Rect(0, BulbSize - filledHeight, BulbSize, filledHeight);
+        }
+
+        /// <summary>
+        /// Cale immédiatement le remplissage de l'ampoule (0 = vide, 1 = plein), en arrêtant
+        /// toute animation en cours. Utiliser pour les valeurs connues avec certitude
+        /// (début de pièce = vide, fin de pièce/hauteur = valeur exacte).
+        /// </summary>
+        public void SetProgress(double fraction)
+        {
+            Rect target = RectForFraction(fraction);
+
+            void Update()
+            {
+                if (_bulbClip == null) return;
+                _bulbClip.BeginAnimation(RectangleGeometry.RectProperty, null); // stoppe l'animation en cours
+                _bulbClip.Rect = target;
+            }
+
+            if (Dispatcher.CheckAccess())
+                Update();
+            else
+                Dispatcher.Invoke(Update);
+        }
+
+        /// <summary>
+        /// Anime le remplissage de l'ampoule vers <paramref name="targetFraction"/> sur une durée
+        /// estimée. L'animation tourne sur le thread propre de la fenêtre : elle continue de
+        /// progresser pendant que le calcul (bloquant) s'exécute sur le thread Revit. Si le calcul
+        /// se termine avant la fin de l'animation, appeler <see cref="SetProgress"/> pour caler la
+        /// valeur exacte ; si le calcul dure plus longtemps que prévu, le remplissage s'arrête
+        /// simplement à <paramref name="targetFraction"/> en attendant.
+        /// </summary>
+        public void AnimateProgressTo(double targetFraction, TimeSpan estimatedDuration)
+        {
+            Rect target = RectForFraction(targetFraction);
+
+            void Update()
+            {
+                if (_bulbClip == null) return;
+                var animation = new RectAnimation(_bulbClip.Rect, target, new Duration(estimatedDuration))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                };
+                _bulbClip.BeginAnimation(RectangleGeometry.RectProperty, animation);
+            }
+
+            if (Dispatcher.CheckAccess())
+                Update();
+            else
+                Dispatcher.Invoke(Update);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -122,12 +237,9 @@ namespace RevitLightingPlugin.UI
                 var img = new Image
                 {
                     Source              = bmp,
-                    Stretch             = Stretch.Uniform,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment   = VerticalAlignment.Center,
-                    Width               = 260,
-                    Height              = 260,
-                    Margin              = new Thickness(20)
+                    Stretch             = Stretch.UniformToFill,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment   = VerticalAlignment.Stretch
                 };
                 RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
                 return img;
@@ -136,10 +248,9 @@ namespace RevitLightingPlugin.UI
             var fallback = new Image
             {
                 Source              = SkylightningTheme.CreateSkylightningIcon(260),
-                Stretch             = Stretch.Uniform,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment   = VerticalAlignment.Center,
-                Margin              = new Thickness(20)
+                Stretch             = Stretch.UniformToFill,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment   = VerticalAlignment.Stretch
             };
             RenderOptions.SetBitmapScalingMode(fallback, BitmapScalingMode.HighQuality);
             return fallback;
