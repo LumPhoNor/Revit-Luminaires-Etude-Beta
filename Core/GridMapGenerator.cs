@@ -115,6 +115,20 @@ namespace RevitLightingPlugin.Core
                     int gridTop = margin + titleHeight;
                     int gridBottom = gridTop + gridDrawHeight;
 
+                    // Les rectangles de cellule (85% de la cellule) sont centrés sur les points de
+                    // mesure : ceux de la rangée du haut / colonne de droite débordent donc d'une
+                    // demi-largeur/hauteur de cellule au-delà de gridTop / gridRight. On réserve cet
+                    // espace pour ne pas empiéter sur le titre (en haut) ni sur la légende (à droite).
+                    double provisionalCellWidth = (double)gridDrawWidth / pointsX;
+                    double provisionalCellHeight = (double)gridDrawHeight / pointsY;
+                    int overflowX = (int)Math.Ceiling(provisionalCellWidth * 0.425);
+                    int overflowY = (int)Math.Ceiling(provisionalCellHeight * 0.425);
+
+                    gridTop += overflowY;
+                    gridRight -= overflowX;
+                    gridDrawWidth = gridRight - gridLeft;
+                    gridDrawHeight = gridBottom - gridTop;
+
                     // Dessiner le contour de la pièce
                     DrawRoomOutline(g, gridLeft, gridRight, gridTop, gridBottom);
 
@@ -138,7 +152,7 @@ namespace RevitLightingPlugin.Core
                         }
                     }
 
-                    // Calculer la taille des cellules en pixels
+                    // Calculer la taille définitive des cellules en pixels (avec la zone ajustée)
                     double cellWidth = (double)gridDrawWidth / pointsX;
                     double cellHeight = (double)gridDrawHeight / pointsY;
 
