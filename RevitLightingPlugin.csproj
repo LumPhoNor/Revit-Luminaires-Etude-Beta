@@ -118,11 +118,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Application.cs" />
+    <Compile Include="Commands\AboutCommand.cs" />
+    <Compile Include="Commands\CalculCommand.cs" />
+    <Compile Include="Commands\LogoCommand.cs" />
     <Compile Include="Commands\DiagnosticLuminaireCommand.cs" />
     <Compile Include="Commands\LightingAnalysisCommand.cs" />
     <Compile Include="Commands\ManageLuminairesCommand.cs" />
+    <Compile Include="Commands\ParametresCommand.cs" />
     <Compile Include="Commands\TestIESParserCommand.cs" />
     <Compile Include="Core\AutoMatcher.cs" />
+    <Compile Include="Core\CalculationSession.cs" />
     <Compile Include="Core\ChartGenerator.cs" />
     <Compile Include="Core\DatabaseManager.cs" />
     <Compile Include="Core\ExportManager.cs" />
@@ -151,7 +156,7 @@
     <Compile Include="Models\LuminaireInfo.cs" />
     <Compile Include="Models\PhotometricData.cs" />
     <Compile Include="UI\LightingAnalysisWindow.cs" />
-    <Compile Include="UI\SkyLightTheme.cs" />
+    <Compile Include="UI\SkylightningTheme.cs" />
     <Compile Include="UI\LoadingWindow.cs" />
     <Compile Include="UI\LuminaireCatalogWindow.cs" />
     <Compile Include="UI\ReportConfigWindow.cs" />

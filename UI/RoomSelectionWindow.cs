@@ -36,7 +36,7 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeComponent()
         {
-            SkyLightTheme.ApplyDarkWindow(this, 950, 650);
+            SkylightningTheme.ApplyDarkWindow(this, 950, 650);
             Title = "Sélection des Pièces - Analyse d'Éclairement";
 
             var mainGrid = new System.Windows.Controls.Grid();
@@ -66,7 +66,7 @@ namespace RevitLightingPlugin.UI
             System.Windows.Controls.Grid.SetRow(buttonPanel, 4);
             mainGrid.Children.Add(buttonPanel);
 
-            Content = SkyLightTheme.BuildDarkShell(mainGrid, 920, 620);
+            Content = SkylightningTheme.BuildDarkShell(mainGrid, 920, 620);
         }
 
         private Image CreateLogoImage()
@@ -95,7 +95,7 @@ namespace RevitLightingPlugin.UI
 
         private UIElement CreateHeader()
         {
-            return SkyLightTheme.BuildDarkHeader(
+            return SkylightningTheme.BuildDarkHeader(
                 "Sélection des Pièces",
                 "Choisissez le type d'activité pour chaque pièce (EN 12464-1)",
                 this);

@@ -58,7 +58,7 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeUI()
         {
-            SkyLightTheme.ApplyDarkWindow(this, 500, 700);
+            SkylightningTheme.ApplyDarkWindow(this, 500, 700);
             Title = "Analyse d'Éclairage";
 
             _heightTextBoxes = new List<TextBox>();
@@ -68,7 +68,7 @@ namespace RevitLightingPlugin.UI
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) });
 
-            var headerDock = SkyLightTheme.BuildDarkHeader(
+            var headerDock = SkylightningTheme.BuildDarkHeader(
                 "Analyse d'Éclairage", "Configuration selon EN 12464-1", this);
             WpfGrid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
@@ -82,7 +82,7 @@ namespace RevitLightingPlugin.UI
             };
 
             var formPanel = new StackPanel();
-            SkyLightTheme.SetPanelForeground(formPanel);
+            SkylightningTheme.SetPanelForeground(formPanel);
 
             // Norme
             formPanel.Children.Add(new TextBlock
@@ -93,7 +93,7 @@ namespace RevitLightingPlugin.UI
             });
 
             _standardComboBox = new ComboBox { Height = 25 };
-            SkyLightTheme.StyleComboBox(_standardComboBox);
+            SkylightningTheme.StyleComboBox(_standardComboBox);
             _standardComboBox.Items.Add("EN 12464-1 (Bureaux)");
             _standardComboBox.Items.Add("EN 12464-1 (Commerce)");
             _standardComboBox.Items.Add("EN 12464-1 (Industrie)");
@@ -110,7 +110,7 @@ namespace RevitLightingPlugin.UI
             });
 
             _activityComboBox = new ComboBox { Height = 25 };
-            SkyLightTheme.StyleComboBox(_activityComboBox);
+            SkylightningTheme.StyleComboBox(_activityComboBox);
             formPanel.Children.Add(_activityComboBox);
 
             // Facteur de maintenance
@@ -126,14 +126,14 @@ namespace RevitLightingPlugin.UI
                 Height = 25,
                 Text = "0.90"
             };
-            SkyLightTheme.StyleTextBox(_maintenanceFactorTextBox);
+            SkylightningTheme.StyleTextBox(_maintenanceFactorTextBox);
             formPanel.Children.Add(_maintenanceFactorTextBox);
 
             var maintenanceHelp = new TextBlock
             {
                 Text = "Valeur recommandée : 0.80 à 0.90 (selon EN 12464-1)",
                 FontSize = 10,
-                Foreground = new SolidColorBrush(SkyLightTheme.TextGray),
+                Foreground = new SolidColorBrush(SkylightningTheme.TextGray),
                 Margin = new Thickness(0, 2, 0, 0)
             };
             formPanel.Children.Add(maintenanceHelp);
@@ -146,7 +146,7 @@ namespace RevitLightingPlugin.UI
                 FontWeight = FontWeights.Bold,
                 IsChecked = true
             };
-            SkyLightTheme.StyleCheckBox(_advancedOptionsCheckBox);
+            SkylightningTheme.StyleCheckBox(_advancedOptionsCheckBox);
             _advancedOptionsCheckBox.Checked += (s, e) => _advancedPanel.Visibility = WpfVisibility.Visible;
             _advancedOptionsCheckBox.Unchecked += (s, e) => _advancedPanel.Visibility = WpfVisibility.Collapsed;
             formPanel.Children.Add(_advancedOptionsCheckBox);
@@ -155,7 +155,7 @@ namespace RevitLightingPlugin.UI
             _advancedPanel = new StackPanel
             {
                 Visibility = WpfVisibility.Visible,
-                Background = new SolidColorBrush(WpfColor.FromArgb(35, 0, 80, 160)),
+                Background = new SolidColorBrush(WpfColor.FromRgb(246, 248, 250)),
                 Margin = new Thickness(0, 0, 0, 10)
             };
 
@@ -182,14 +182,14 @@ namespace RevitLightingPlugin.UI
                 Height = 25,
                 Margin = new Thickness(10, 0, 10, 2)
             };
-            SkyLightTheme.StyleTextBox(_gridSpacingTextBox);
+            SkylightningTheme.StyleTextBox(_gridSpacingTextBox);
             _advancedPanel.Children.Add(_gridSpacingTextBox);
 
             _advancedPanel.Children.Add(new TextBlock
             {
                 Text = "Plus petit = plus précis mais plus lent (0.25 à 3.0)",
                 FontSize = 9,
-                Foreground = new SolidColorBrush(SkyLightTheme.TextGray),
+                Foreground = new SolidColorBrush(SkylightningTheme.TextGray),
                 Margin = new Thickness(10, 2, 10, 10)
             });
 
@@ -207,13 +207,13 @@ namespace RevitLightingPlugin.UI
                 Height = 25,
                 Margin = new Thickness(10, 0, 10, 2)
             };
-            SkyLightTheme.StyleTextBox(_wallMarginTextBox);
+            SkylightningTheme.StyleTextBox(_wallMarginTextBox);
             _advancedPanel.Children.Add(_wallMarginTextBox);
             _advancedPanel.Children.Add(new TextBlock
             {
                 Text = "Exclut les points à moins de cette distance des murs (0 à 2.0 m)",
                 FontSize = 9,
-                Foreground = new SolidColorBrush(SkyLightTheme.TextGray),
+                Foreground = new SolidColorBrush(SkylightningTheme.TextGray),
                 Margin = new Thickness(10, 2, 10, 10)
             });
 
@@ -244,7 +244,7 @@ namespace RevitLightingPlugin.UI
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Width = 150
             };
-            SkyLightTheme.StyleButton(addHeightButton, false);
+            SkylightningTheme.StyleButton(addHeightButton, false);
             addHeightButton.Click += AddHeightButton_Click;
             _advancedPanel.Children.Add(addHeightButton);
 
@@ -255,7 +255,7 @@ namespace RevitLightingPlugin.UI
                 IsChecked = false,
                 ToolTip = "Ajoute un calcul au niveau du sol en plus de la hauteur configurée"
             };
-            SkyLightTheme.StyleCheckBox(_includeFloorCheckBox);
+            SkylightningTheme.StyleCheckBox(_includeFloorCheckBox);
             _advancedPanel.Children.Add(_includeFloorCheckBox);
 
             // P2: Section Flux Indirect (Réflexions)
@@ -274,7 +274,7 @@ namespace RevitLightingPlugin.UI
                 IsChecked = true,
                 ToolTip = "Ajoute les réflexions des surfaces (plafond, murs, sol) - Améliore la précision"
             };
-            SkyLightTheme.StyleCheckBox(_includeIndirectCheckBox);
+            SkylightningTheme.StyleCheckBox(_includeIndirectCheckBox);
             _advancedPanel.Children.Add(_includeIndirectCheckBox);
 
             _advancedPanel.Children.Add(new TextBlock
@@ -291,7 +291,7 @@ namespace RevitLightingPlugin.UI
                 Margin = new Thickness(20, 0, 10, 2),
                 ToolTip = "Plafond blanc: 0.70-0.80, clair: 0.50-0.70, foncé: 0.10-0.30"
             };
-            SkyLightTheme.StyleTextBox(_ceilingReflectanceTextBox);
+            SkylightningTheme.StyleTextBox(_ceilingReflectanceTextBox);
             _advancedPanel.Children.Add(_ceilingReflectanceTextBox);
 
             _advancedPanel.Children.Add(new TextBlock
@@ -308,7 +308,7 @@ namespace RevitLightingPlugin.UI
                 Margin = new Thickness(20, 0, 10, 2),
                 ToolTip = "Murs clairs: 0.50-0.70, moyens: 0.30-0.50, foncés: 0.10-0.30"
             };
-            SkyLightTheme.StyleTextBox(_wallReflectanceTextBox);
+            SkylightningTheme.StyleTextBox(_wallReflectanceTextBox);
             _advancedPanel.Children.Add(_wallReflectanceTextBox);
 
             _advancedPanel.Children.Add(new TextBlock
@@ -325,7 +325,7 @@ namespace RevitLightingPlugin.UI
                 Margin = new Thickness(20, 0, 10, 10),
                 ToolTip = "Sol clair: 0.20-0.40, moyen: 0.10-0.20, foncé: 0.05-0.10"
             };
-            SkyLightTheme.StyleTextBox(_floorReflectanceTextBox);
+            SkylightningTheme.StyleTextBox(_floorReflectanceTextBox);
             _advancedPanel.Children.Add(_floorReflectanceTextBox);
 
             // P3: Facteurs de maintenance variables (EN 12464-1 Annexe B)
@@ -349,13 +349,13 @@ namespace RevitLightingPlugin.UI
                 Height = 25,
                 Margin = new Thickness(20, 0, 10, 2)
             };
-            _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Très propre (Bureau, résidentiel)", Tag = MaintenanceCategory.VeryClean });
-            _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Propre (Commerce)", Tag = MaintenanceCategory.Clean, IsSelected = true });
+            _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Très propre (Bureau, résidentiel)", Tag = MaintenanceCategory.VeryClean, IsSelected = true });
+            _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Propre (Commerce)", Tag = MaintenanceCategory.Clean });
             _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Normal (Industrie propre)", Tag = MaintenanceCategory.Normal });
             _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Sale (Atelier, production)", Tag = MaintenanceCategory.Dirty });
             _environmentComboBox.Items.Add(new ComboBoxItem { Content = "Très sale (Environnement hostile)", Tag = MaintenanceCategory.VeryDirty });
             _environmentComboBox.SelectionChanged += OnMaintenanceParametersChanged;
-            SkyLightTheme.StyleComboBox(_environmentComboBox);
+            SkylightningTheme.StyleComboBox(_environmentComboBox);
             _advancedPanel.Children.Add(_environmentComboBox);
 
             _advancedPanel.Children.Add(new TextBlock
@@ -374,20 +374,20 @@ namespace RevitLightingPlugin.UI
             _luminaireEnclosureComboBox.Items.Add(new ComboBoxItem { Content = "Semi-fermé (IP54)", Tag = LuminaireEnclosure.EnclosedIP54 });
             _luminaireEnclosureComboBox.Items.Add(new ComboBoxItem { Content = "Ouvert (IP20)", Tag = LuminaireEnclosure.OpenIP20 });
             _luminaireEnclosureComboBox.SelectionChanged += OnMaintenanceParametersChanged;
-            SkyLightTheme.StyleComboBox(_luminaireEnclosureComboBox);
+            SkylightningTheme.StyleComboBox(_luminaireEnclosureComboBox);
             _advancedPanel.Children.Add(_luminaireEnclosureComboBox);
 
             _calculatedMaintenanceFactorText = new TextBlock
             {
-                Text = "➜ Facteur de maintenance calculé : 0.88",
+                Text = "➜ Facteur de maintenance calculé : 0.90",
                 FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush(SkyLightTheme.GreenOk),
+                Foreground = new SolidColorBrush(SkylightningTheme.GreenOk),
                 Margin = new Thickness(20, 5, 10, 10),
                 FontSize = 11
             };
             _advancedPanel.Children.Add(_calculatedMaintenanceFactorText);
 
-            SkyLightTheme.SetPanelForeground(_advancedPanel);
+            SkylightningTheme.SetPanelForeground(_advancedPanel);
             formPanel.Children.Add(_advancedPanel);
 
             scrollViewer.Content = formPanel;
@@ -409,7 +409,7 @@ namespace RevitLightingPlugin.UI
                 Height = 35,
                 Margin = new Thickness(0, 0, 10, 0)
             };
-            SkyLightTheme.StyleButton(analyzeButton, true);
+            SkylightningTheme.StyleButton(analyzeButton, true);
             analyzeButton.Click += AnalyzeButton_Click;
 
             var cancelButton = new Button
@@ -418,7 +418,7 @@ namespace RevitLightingPlugin.UI
                 Width = 100,
                 Height = 35
             };
-            SkyLightTheme.StyleButton(cancelButton, false);
+            SkylightningTheme.StyleButton(cancelButton, false);
             cancelButton.Click += (s, e) => { DialogResult = false; Close(); };
 
             buttonPanel.Children.Add(analyzeButton);
@@ -427,7 +427,7 @@ namespace RevitLightingPlugin.UI
             WpfGrid.SetRow(buttonPanel, 2);
             mainGrid.Children.Add(buttonPanel);
 
-            Content = SkyLightTheme.BuildDarkShell(mainGrid, 470, 670);
+            Content = SkylightningTheme.BuildDarkShell(mainGrid, 470, 670);
         }
 
         private void LoadDefaults()
@@ -665,7 +665,7 @@ namespace RevitLightingPlugin.UI
                 Height = 25,
                 Margin = new Thickness(0, 0, 5, 0)
             };
-            SkyLightTheme.StyleTextBox(heightTextBox);
+            SkylightningTheme.StyleTextBox(heightTextBox);
             _heightTextBoxes.Add(heightTextBox);
             heightPanel.Children.Add(heightTextBox);
 
@@ -676,7 +676,7 @@ namespace RevitLightingPlugin.UI
                     Content = "✕",
                     Width = 25,
                     Height = 25,
-                    Foreground = new SolidColorBrush(SkyLightTheme.RedWarn)
+                    Foreground = new SolidColorBrush(SkylightningTheme.RedWarn)
                 };
                 removeButton.Click += (s, e) => RemoveHeightTextBox(heightPanel, heightTextBox);
                 heightPanel.Children.Add(removeButton);

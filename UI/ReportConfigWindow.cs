@@ -28,7 +28,7 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeComponent()
         {
-            SkyLightTheme.ApplyDarkWindow(this, 550, 500);
+            SkylightningTheme.ApplyDarkWindow(this, 550, 500);
             Title = "Configuration du Rapport";
 
             var mainGrid = new Grid();
@@ -37,14 +37,14 @@ namespace RevitLightingPlugin.UI
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            var headerDock = SkyLightTheme.BuildDarkHeader(
+            var headerDock = SkylightningTheme.BuildDarkHeader(
                 "Configuration du Rapport", "Informations de la page de garde PDF", this);
             Grid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
 
             // Form fields
             var formStack = new StackPanel { Margin = new Thickness(20, 15, 20, 10) };
-            SkyLightTheme.SetPanelForeground(formStack);
+            SkylightningTheme.SetPanelForeground(formStack);
             Grid.SetRow(formStack, 1);
 
             _projectNameBox  = AddFormField(formStack, "Nom de l'affaire :",  "Mon Projet");
@@ -72,7 +72,7 @@ namespace RevitLightingPlugin.UI
                 Margin = new Thickness(0, 0, 10, 0),
                 IsDefault = true
             };
-            SkyLightTheme.StyleButton(okButton, true);
+            SkylightningTheme.StyleButton(okButton, true);
             okButton.Click += OnOkClick;
             buttonPanel.Children.Add(okButton);
 
@@ -83,13 +83,13 @@ namespace RevitLightingPlugin.UI
                 Height = 30,
                 IsCancel = true
             };
-            SkyLightTheme.StyleButton(cancelButton, false);
+            SkylightningTheme.StyleButton(cancelButton, false);
             cancelButton.Click += (s, e) => { DialogResult = false; Close(); };
             buttonPanel.Children.Add(cancelButton);
 
             mainGrid.Children.Add(buttonPanel);
 
-            Content = SkyLightTheme.BuildDarkShell(mainGrid, 520, 470);
+            Content = SkylightningTheme.BuildDarkShell(mainGrid, 520, 470);
         }
 
         private TextBox AddFormField(StackPanel panel, string label, string defaultValue)
@@ -109,7 +109,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5),
                 Height = 30
             };
-            SkyLightTheme.StyleTextBox(textBox);
+            SkylightningTheme.StyleTextBox(textBox);
             fieldPanel.Children.Add(textBox);
 
             panel.Children.Add(fieldPanel);

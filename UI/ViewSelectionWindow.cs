@@ -74,7 +74,7 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeComponent()
         {
-            SkyLightTheme.ApplyDarkWindow(this, 760, 520);
+            SkylightningTheme.ApplyDarkWindow(this, 760, 520);
             Title = "Sélection des Vues";
 
             var mainGrid = new Grid();
@@ -83,7 +83,7 @@ namespace RevitLightingPlugin.UI
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            var headerDock = SkyLightTheme.BuildDarkHeader(
+            var headerDock = SkylightningTheme.BuildDarkHeader(
                 "Sélection des Vues", "Vues 2D/3D à inclure dans le rapport", this);
             Grid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
@@ -117,7 +117,7 @@ namespace RevitLightingPlugin.UI
                 Margin = new Thickness(0, 0, 10, 0),
                 IsDefault = true
             };
-            SkyLightTheme.StyleButton(btnOk, true);
+            SkylightningTheme.StyleButton(btnOk, true);
             btnOk.Click += OnOkClick;
             btnPanel.Children.Add(btnOk);
 
@@ -128,13 +128,13 @@ namespace RevitLightingPlugin.UI
                 Height = 30,
                 IsCancel = true
             };
-            SkyLightTheme.StyleButton(btnCancel, false);
+            SkylightningTheme.StyleButton(btnCancel, false);
             btnCancel.Click += (s, e) => { DialogResult = false; Close(); };
             btnPanel.Children.Add(btnCancel);
 
             mainGrid.Children.Add(btnPanel);
 
-            Content = SkyLightTheme.BuildDarkShell(mainGrid, 730, 490);
+            Content = SkylightningTheme.BuildDarkShell(mainGrid, 730, 490);
         }
 
         /// <summary>Construit un tableau header+lignes sans ListView/GridView pour garantir l'alignement des colonnes.</summary>

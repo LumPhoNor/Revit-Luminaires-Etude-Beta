@@ -27,7 +27,7 @@ namespace RevitLightingPlugin.UI
 
         private void InitializeUI()
         {
-            SkyLightTheme.ApplyDarkWindow(this, 900, 600);
+            SkylightningTheme.ApplyDarkWindow(this, 900, 600);
             Title = "Catalogue de Luminaires";
 
             var mainGrid = new WpfGrid();
@@ -35,7 +35,7 @@ namespace RevitLightingPlugin.UI
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) });
 
-            var headerDock = SkyLightTheme.BuildDarkHeader(
+            var headerDock = SkylightningTheme.BuildDarkHeader(
                 "Catalogue de Luminaires", "Gérez votre base de données IES", this);
             WpfGrid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
@@ -116,7 +116,7 @@ namespace RevitLightingPlugin.UI
                 SelectionMode = DataGridSelectionMode.Single,
                 GridLinesVisibility = DataGridGridLinesVisibility.All
             };
-            SkyLightTheme.StyleDataGrid(_dataGrid);
+            SkylightningTheme.StyleDataGrid(_dataGrid);
 
             // Colonnes
             _dataGrid.Columns.Add(new DataGridTextColumn
@@ -201,7 +201,7 @@ namespace RevitLightingPlugin.UI
                 Text = "Luminaires (0)",
                 FontSize = 12,
                 Margin = new Thickness(10, 10, 10, 10),
-                Foreground = new SolidColorBrush(SkyLightTheme.TextCyan),
+                Foreground = new SolidColorBrush(SkylightningTheme.TextCyan),
                 VerticalAlignment = VerticalAlignment.Center
             };
 
@@ -212,7 +212,7 @@ namespace RevitLightingPlugin.UI
                 Height = 30,
                 Margin = new Thickness(0, 5, 10, 5)
             };
-            SkyLightTheme.StyleButton(closeButton, false);
+            SkylightningTheme.StyleButton(closeButton, false);
             closeButton.Click += (s, e) => Close();
 
             WpfGrid.SetColumn(_countText, 0);
@@ -228,9 +228,9 @@ namespace RevitLightingPlugin.UI
 
             // Style boutons d'action
             foreach (var child in buttonPanel.Children)
-                if (child is Button btn) SkyLightTheme.StyleButton(btn, false);
+                if (child is Button btn) SkylightningTheme.StyleButton(btn, false);
 
-            Content = SkyLightTheme.BuildDarkShell(mainGrid, 870, 570);
+            Content = SkylightningTheme.BuildDarkShell(mainGrid, 870, 570);
         }
 
         private void LoadLuminaires()

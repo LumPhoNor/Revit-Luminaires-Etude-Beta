@@ -1,62 +1,83 @@
 using System;
-using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.IO;
 using System.Reflection;
 using Autodesk.Revit.UI;
 using RevitLightingPlugin.Core;
+using RevitLightingPlugin.UI;
 
 namespace RevitLightingPlugin
 {
     public class Application : IExternalApplication
     {
-        private static readonly string LogoDir =
-            @"C:\Users\User\Documents\Projets Plugin\Logo";
+        private const string TabName = "Skylightning";
 
         public Result OnStartup(UIControlledApplication application)
         {
             Logger.Initialize();
             Logger.Separator("APPLICATION STARTUP");
-            Logger.Info("Application", "Démarrage du plugin RevitLightingPlugin");
+            Logger.Info("Application", "Démarrage du plugin Skylightning");
             Logger.EnterMethod("Application", "OnStartup");
 
             try
             {
-                string tabName = "SkyLight";
-                try
-                {
-                    application.CreateRibbonTab(tabName);
-                    Logger.Info("Application", $"Onglet '{tabName}' créé");
-                }
-                catch
-                {
-                    Logger.Warning("Application", $"Onglet '{tabName}' existe déjà");
-                }
+                try   { application.CreateRibbonTab(TabName); Logger.Info("Application", $"Onglet '{TabName}' créé"); }
+                catch { Logger.Warning("Application", $"Onglet '{TabName}' existe déjà"); }
 
-                RibbonPanel panel = application.CreateRibbonPanel(tabName, "initium");
-
+                RibbonPanel panel = application.CreateRibbonPanel(TabName, "Skylightning");
                 string assemblyPath = Assembly.GetExecutingAssembly().Location;
 
-                PushButtonData buttonData = new PushButtonData(
-                    "LightingAnalysis",
-                    "Analyse\nÉclairement",
+                // PNG logo (chargé via MemoryStream — centré dans 32×32)
+                var pngLarge = LoadButtonIcon(32);
+                var pngSmall = LoadButtonIcon(16);
+                Logger.Info("Application", $"PNG logo : {pngLarge?.PixelWidth}×{pngLarge?.PixelHeight} px");
+
+                // ── Bouton PARAMÈTRES (grand — logo PNG centré) ───────────────
+                var parametresData = new PushButtonData(
+                    "SkylightningParametres",
+                    "Paramètres",
                     assemblyPath,
-                    "RevitLightingPlugin.Commands.LightingAnalysisCommand"
-                );
-                buttonData.ToolTip = "Analyse l'éclairement des pièces sélectionnées";
-                buttonData.LongDescription =
-                    "Ouvre une interface pour sélectionner les pièces à analyser " +
-                    "et calcule l'éclairement selon les normes EN 12464-1.";
+                    "RevitLightingPlugin.Commands.ParametresCommand")
+                {
+                    ToolTip    = "Configure les pièces, l'analyse et les vues",
+                    LargeImage = pngLarge,
+                    Image      = pngSmall
+                };
 
-                // Icônes générées via SkyLightTheme (partagées avec LoadingWindow)
-                buttonData.LargeImage = RevitLightingPlugin.UI.SkyLightTheme.CreateSkyLightIcon(64);
-                buttonData.Image      = RevitLightingPlugin.UI.SkyLightTheme.CreateSkyLightIcon(16);
+                // ── Bouton CALCUL (grand) ─────────────────────────────────────
+                var calculData = new PushButtonData(
+                    "SkylightningCalcul",
+                    "Calcul",
+                    assemblyPath,
+                    "RevitLightingPlugin.Commands.CalculCommand")
+                {
+                    ToolTip    = "Lance le calcul d'éclairement",
+                    LargeImage = CreateCalcIconLarge(),
+                    Image      = CreateCalcIcon()
+                };
 
-                panel.AddItem(buttonData);
-                Logger.Info("Application", "Bouton 'Analyse Éclairement' ajouté");
+                // ── Bouton À PROPOS ⓘ (grand) ─────────────────────────────────
+                var aboutData = new PushButtonData(
+                    "SkylightningAbout",
+                    "À propos",
+                    assemblyPath,
+                    "RevitLightingPlugin.Commands.AboutCommand")
+                {
+                    ToolTip    = "Version et informations du plugin",
+                    LargeImage = CreateInfoIconLarge(),
+                    Image      = CreateInfoIcon()
+                };
 
-                ApplyPanelTheme(tabName);
+                // Layout : [Paramètres (grand)] │ [Calcul (grand)] │ [À propos (grand)]
+                panel.AddItem(parametresData);
+                panel.AddSeparator();
+                panel.AddItem(calculData);
+                panel.AddSeparator();
+                panel.AddItem(aboutData);
+
+                Logger.Info("Application", "Ruban Skylightning configuré");
+                ApplyPanelTheme();
 
                 Logger.Info("Application", "✅ Plugin démarré avec succès");
                 Logger.ExitMethod("Application", "OnStartup", "Result.Succeeded");
@@ -70,6 +91,156 @@ namespace RevitLightingPlugin
                 TaskDialog.Show("Erreur", $"Erreur au démarrage du plugin :\n{ex.Message}");
                 return Result.Failed;
             }
+        }
+
+        // ── Charge le PNG via MemoryStream (évite tout pb de chemin/URI/DPI) ──────
+        private static BitmapSource LoadButtonIcon(int size)
+        {
+            try
+            {
+                string path = SkylightningTheme.LogoV21Path;
+                if (!File.Exists(path))
+                {
+                    Logger.Warning("Application", $"PNG introuvable : {path}");
+                    return SkylightningTheme.CreateSkylightningIcon(size);
+                }
+
+                byte[] bytes = File.ReadAllBytes(path);
+                using (var ms = new System.IO.MemoryStream(bytes))
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.StreamSource     = ms;
+                    bmp.DecodePixelWidth = size;
+                    bmp.CacheOption      = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    Logger.Info("Application", $"PNG chargé : {bmp.PixelWidth}×{bmp.PixelHeight} px");
+                    return bmp;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Application", $"Erreur chargement PNG logo : {ex.Message}", ex);
+                return SkylightningTheme.CreateSkylightningIcon(size);
+            }
+        }
+
+        // ── Icône Paramètres : 3 barres réglage bleues (16px) ────────────────
+        private static BitmapSource CreateSettingsIcon()
+        {
+            var dv = new System.Windows.Media.DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216)); // #1D4ED8
+                var pen  = new System.Windows.Media.Pen(blue, 1.3);
+                double[] ys = { 4, 8, 12 };
+                double[] xs = { 5, 10, 7 };
+                for (int i = 0; i < 3; i++)
+                {
+                    dc.DrawLine(pen,
+                        new System.Windows.Point(2,  ys[i]),
+                        new System.Windows.Point(14, ys[i]));
+                    dc.DrawEllipse(blue, null,
+                        new System.Windows.Point(xs[i], ys[i]), 2.0, 2.0);
+                }
+            }
+            var rtb = new RenderTargetBitmap(16, 16, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
+        }
+
+        // ── Icône Calcul : éclair bleu (16px) ────────────────────────────────
+        private static BitmapSource CreateCalcIcon()
+        {
+            var dv = new System.Windows.Media.DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216)); // #1D4ED8
+                var geom = new System.Windows.Media.StreamGeometry();
+                using (var ctx = geom.Open())
+                {
+                    ctx.BeginFigure(new System.Windows.Point(10, 1), true, true);
+                    ctx.LineTo(new System.Windows.Point(5,  8), true, false);
+                    ctx.LineTo(new System.Windows.Point(9,  8), true, false);
+                    ctx.LineTo(new System.Windows.Point(4, 15), true, false);
+                    ctx.LineTo(new System.Windows.Point(13, 7), true, false);
+                    ctx.LineTo(new System.Windows.Point(9,  7), true, false);
+                }
+                geom.Freeze();
+                dc.DrawGeometry(blue, null, geom);
+            }
+            var rtb = new RenderTargetBitmap(16, 16, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
+        }
+
+        // ── Icône Calcul grand (32px) ─────────────────────────────────────────
+        private static BitmapSource CreateCalcIconLarge() => BuildCalcIcon(32);
+
+        private static BitmapSource BuildCalcIcon(int size)
+        {
+            double s = size;
+            var dv = new System.Windows.Media.DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                var blue = new SolidColorBrush(Color.FromRgb(29, 78, 216));
+                var geom = new System.Windows.Media.StreamGeometry();
+                using (var ctx = geom.Open())
+                {
+                    // Éclair centré proportionnel à size
+                    ctx.BeginFigure(new System.Windows.Point(s*0.62, s*0.06), true, true);
+                    ctx.LineTo(new System.Windows.Point(s*0.31, s*0.50), true, false);
+                    ctx.LineTo(new System.Windows.Point(s*0.56, s*0.50), true, false);
+                    ctx.LineTo(new System.Windows.Point(s*0.25, s*0.94), true, false);
+                    ctx.LineTo(new System.Windows.Point(s*0.81, s*0.44), true, false);
+                    ctx.LineTo(new System.Windows.Point(s*0.56, s*0.44), true, false);
+                }
+                geom.Freeze();
+                dc.DrawGeometry(blue, null, geom);
+            }
+            var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
+        }
+
+        // ── Icône À propos : cercle bleu + "i" blanc (16px / 32px) ───────────
+        private static BitmapSource CreateInfoIcon()      => BuildInfoIcon(16);
+        private static BitmapSource CreateInfoIconLarge() => BuildInfoIcon(32);
+
+        private static BitmapSource BuildInfoIcon(int size)
+        {
+            double s  = size;
+            double cx = s / 2.0;
+            var dv = new System.Windows.Media.DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                var blue  = new SolidColorBrush(Color.FromRgb( 29,  78, 216)); // #1D4ED8
+                var white = new SolidColorBrush(Color.FromRgb(255, 255, 255));
+                dc.DrawEllipse(blue, null,
+                    new System.Windows.Point(cx, cx), s * 0.45, s * 0.45);
+                var tf = new System.Windows.Media.Typeface(
+                    new System.Windows.Media.FontFamily("Arial"),
+                    System.Windows.FontStyles.Normal,
+                    System.Windows.FontWeights.Bold,
+                    System.Windows.FontStretches.Normal);
+#pragma warning disable CS0618
+                var ft = new System.Windows.Media.FormattedText(
+                    "i",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Windows.FlowDirection.LeftToRight,
+                    tf, s * 0.58, white);
+#pragma warning restore CS0618
+                dc.DrawText(ft,
+                    new System.Windows.Point(cx - ft.Width / 2, cx - ft.Height / 2 - s * 0.02));
+            }
+            var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
         }
 
         public Result OnShutdown(UIControlledApplication application)
@@ -96,34 +267,16 @@ namespace RevitLightingPlugin
         //  Fond barre titre panneau ribbon
         // ─────────────────────────────────────────────────────────────────────
 
-        private static void ApplyPanelTheme(string tabName)
+        private static void ApplyPanelTheme() { }
+
+        // Commande vide : le clic sur le logo ne fait rien
+        private class NoOpCommand : System.Windows.Input.ICommand
         {
-            try
-            {
-                var titleBrush = new SolidColorBrush(Color.FromRgb(35, 60, 92));
-                titleBrush.Freeze();
-
-                var adwRibbon = Autodesk.Windows.ComponentManager.Ribbon;
-                foreach (Autodesk.Windows.RibbonTab tab in adwRibbon.Tabs)
-                {
-                    if (!string.Equals(tab.Id,    tabName, StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(tab.Title, tabName, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    foreach (Autodesk.Windows.RibbonPanel adwPanel in tab.Panels)
-                    {
-                        // Barre titre : défaut Revit (pas de couleur personnalisée)
-                        // → évite le rectangle flottant vide
-                    }
-
-                    Logger.Info("Application", "Thème barre titre appliqué");
-                    break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning("Application", $"Thème panneau non appliqué : {ex.Message}");
-            }
+#pragma warning disable CS0067
+            public event EventHandler CanExecuteChanged;
+#pragma warning restore CS0067
+            public bool CanExecute(object parameter) => true;
+            public void Execute(object parameter) { }
         }
     }
 }

@@ -41,6 +41,7 @@ namespace RevitLightingPlugin.Core
             public double Height { get; set; }
 
             // Facteurs
+            public double CandelaMultiplier { get; set; } = 1.0;
             public double BallistFactor { get; set; }
             public double BallastLampPhotometricFactor { get; set; }
 
@@ -291,6 +292,7 @@ namespace RevitLightingPlugin.Core
                 }
 
                 double multiplier = values[2]; // Multiplicateur de candela
+                data.CandelaMultiplier = (multiplier > 0) ? multiplier : 1.0;
                 data.NumberOfVerticalAngles = (int)values[3];
                 data.NumberOfHorizontalAngles = (int)values[4];
                 data.PhotometricType = (PhotometricType)(int)values[5];

@@ -27,7 +27,7 @@ namespace RevitLightingPlugin.UI
 
         public ReportInfoDialog()
         {
-            SkyLightTheme.ApplyDarkWindow(this, 550, 550);
+            SkylightningTheme.ApplyDarkWindow(this, 550, 550);
             Title = "Informations du Rapport";
 
             InitializeUI();
@@ -41,7 +41,7 @@ namespace RevitLightingPlugin.UI
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) });
 
-            var headerDock = SkyLightTheme.BuildDarkHeader(
+            var headerDock = SkylightningTheme.BuildDarkHeader(
                 "Informations du Rapport", "Ces informations apparaîtront sur la page de garde", this);
             WpfGrid.SetRow(headerDock, 0);
             mainGrid.Children.Add(headerDock);
@@ -51,7 +51,7 @@ namespace RevitLightingPlugin.UI
             {
                 Margin = new Thickness(20, 15, 20, 15)
             };
-            SkyLightTheme.SetPanelForeground(formPanel);
+            SkylightningTheme.SetPanelForeground(formPanel);
 
             // Nom de l'affaire
             formPanel.Children.Add(new TextBlock
@@ -66,7 +66,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
-            SkyLightTheme.StyleTextBox(_projectNameTextBox);
+            SkylightningTheme.StyleTextBox(_projectNameTextBox);
             formPanel.Children.Add(_projectNameTextBox);
 
             // Référence du projet
@@ -82,7 +82,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
-            SkyLightTheme.StyleTextBox(_projectReferenceTextBox);
+            SkylightningTheme.StyleTextBox(_projectReferenceTextBox);
             formPanel.Children.Add(_projectReferenceTextBox);
 
             // Client
@@ -98,7 +98,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
-            SkyLightTheme.StyleTextBox(_clientNameTextBox);
+            SkylightningTheme.StyleTextBox(_clientNameTextBox);
             formPanel.Children.Add(_clientNameTextBox);
 
             // Bureau d'études
@@ -114,7 +114,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
-            SkyLightTheme.StyleTextBox(_engineeringFirmTextBox);
+            SkylightningTheme.StyleTextBox(_engineeringFirmTextBox);
             formPanel.Children.Add(_engineeringFirmTextBox);
 
             // Ingénieur
@@ -130,7 +130,7 @@ namespace RevitLightingPlugin.UI
                 Padding = new Thickness(5, 5, 5, 5),
                 FontSize = 12
             };
-            SkyLightTheme.StyleTextBox(_engineerNameTextBox);
+            SkylightningTheme.StyleTextBox(_engineerNameTextBox);
             formPanel.Children.Add(_engineerNameTextBox);
 
             // Note
@@ -139,7 +139,7 @@ namespace RevitLightingPlugin.UI
                 Text = "* Champs obligatoires",
                 FontSize = 10,
                 FontStyle = FontStyles.Italic,
-                Foreground = new SolidColorBrush(SkyLightTheme.TextGray),
+                Foreground = new SolidColorBrush(SkylightningTheme.TextGray),
                 Margin = new Thickness(0, 15, 0, 0)
             };
             formPanel.Children.Add(noteText);
@@ -162,7 +162,7 @@ namespace RevitLightingPlugin.UI
                 Height = 32,
                 Margin = new Thickness(0, 0, 10, 0)
             };
-            SkyLightTheme.StyleButton(okButton, true);
+            SkylightningTheme.StyleButton(okButton, true);
             okButton.Click += OkButton_Click;
 
             var cancelButton = new Button
@@ -171,7 +171,7 @@ namespace RevitLightingPlugin.UI
                 Width = 100,
                 Height = 32
             };
-            SkyLightTheme.StyleButton(cancelButton, false);
+            SkylightningTheme.StyleButton(cancelButton, false);
             cancelButton.Click += (s, e) => { DialogResult = false; Close(); };
 
             buttonPanel.Children.Add(okButton);
@@ -180,7 +180,7 @@ namespace RevitLightingPlugin.UI
             WpfGrid.SetRow(buttonPanel, 2);
             mainGrid.Children.Add(buttonPanel);
 
-            Content = SkyLightTheme.BuildDarkShell(mainGrid, 520, 520);
+            Content = SkylightningTheme.BuildDarkShell(mainGrid, 520, 520);
         }
 
         private void LoadDefaults()

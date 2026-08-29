@@ -45,19 +45,20 @@ namespace RevitLightingPlugin.UI
 
         private void BuildUI()
         {
-            // Shell principal — même border arrondie + halo doré que les autres fenêtres
             var mainBorder = new Border
             {
-                Margin       = new Thickness(15),
-                CornerRadius = new CornerRadius(12),
-                Background   = BuildSteelGradient(),
-                ClipToBounds = true,
+                Margin          = new Thickness(10),
+                CornerRadius    = new CornerRadius(8),
+                Background      = new SolidColorBrush(Color.FromRgb(245, 246, 248)),
+                ClipToBounds    = true,
+                BorderBrush     = new SolidColorBrush(Color.FromRgb(209, 213, 219)),
+                BorderThickness = new Thickness(1),
                 Effect = new DropShadowEffect
                 {
-                    Color       = Color.FromRgb(190, 140, 10),   // halo doré (logo)
-                    BlurRadius  = 30,
-                    ShadowDepth = 0,
-                    Opacity     = 0.65
+                    Color       = Color.FromRgb(150, 150, 155),
+                    BlurRadius  = 16,
+                    ShadowDepth = 2,
+                    Opacity     = 0.20
                 }
             };
 
@@ -66,30 +67,24 @@ namespace RevitLightingPlugin.UI
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             mainBorder.Child = root;
 
-            // ── Zone hologramme ──────────────────────────────────────────────
-            var holoArea = new Grid
+            // ── Logo centré ──────────────────────────────────────────────────
+            var logoArea = new Grid
             {
-                Width        = HoloW,
-                Height       = HoloH,
-                ClipToBounds = true,
-                Margin       = new Thickness(0, 8, 0, 0),
+                Width               = HoloW,
+                Height              = HoloH,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
+            logoArea.Children.Add(BuildLogoImage());
 
-            holoArea.Children.Add(BuildGridOverlay());   // grille or subtile
-            holoArea.Children.Add(BuildScanLine());      // ligne scan ambre
-            holoArea.Children.Add(BuildCenterGlow());    // lueur centrale dorée
-            holoArea.Children.Add(BuildLogoImage());     // logo
-            holoArea.Children.Add(BuildCorners());       // coins HUD or
-
-            Grid.SetRow(holoArea, 0);
-            root.Children.Add(holoArea);
+            Grid.SetRow(logoArea, 0);
+            root.Children.Add(logoArea);
 
             // ── Barre de statut ──────────────────────────────────────────────
             var statusBar = new Border
             {
-                BorderBrush     = new SolidColorBrush(Color.FromArgb(100, 255, 185, 30)),  // ligne or
+                BorderBrush     = new SolidColorBrush(Color.FromRgb(209, 213, 219)),
                 BorderThickness = new Thickness(0, 1, 0, 0),
+                Background      = new SolidColorBrush(Color.FromRgb(235, 237, 241)),
                 Padding         = new Thickness(15, 10, 15, 14)
             };
             _statusText = new TextBlock
@@ -97,7 +92,7 @@ namespace RevitLightingPlugin.UI
                 Text                = "Initialisation...",
                 FontSize            = 12,
                 FontWeight          = FontWeights.SemiBold,
-                Foreground          = new SolidColorBrush(SkyLightTheme.TextCyan),  // or ambre
+                Foreground          = new SolidColorBrush(Color.FromRgb(55, 65, 81)),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 TextAlignment       = TextAlignment.Center
             };
@@ -112,128 +107,42 @@ namespace RevitLightingPlugin.UI
         //  Fond et effets
         // ─────────────────────────────────────────────────────────────────────
 
-        /// <summary>Gradient bleu acier — même palette que SkyLightTheme.BuildNavyGradient().</summary>
-        private static LinearGradientBrush BuildSteelGradient()
+
+        private static UIElement BuildLogoImage()
         {
-            var b = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0.4, 1) };
-            b.GradientStops.Add(new GradientStop(SkyLightTheme.NavyLight, 0.0));
-            b.GradientStops.Add(new GradientStop(SkyLightTheme.NavyMid,   0.5));
-            b.GradientStops.Add(new GradientStop(SkyLightTheme.NavyDark,  1.0));
-            return b;
-        }
-
-        /// <summary>Grille orthogonale or subtile (pas 30 px).</summary>
-        private static Canvas BuildGridOverlay()
-        {
-            var c   = new Canvas { IsHitTestVisible = false };
-            var pen = new SolidColorBrush(Color.FromArgb(18, 255, 185, 30));  // or très discret
-
-            for (double x = 0; x <= 400; x += 30)
-                c.Children.Add(new Line { X1=x, Y1=0, X2=x, Y2=400, Stroke=pen, StrokeThickness=0.5 });
-            for (double y = 0; y <= 400; y += 30)
-                c.Children.Add(new Line { X1=0, Y1=y, X2=400, Y2=y, Stroke=pen, StrokeThickness=0.5 });
-
-            return c;
-        }
-
-        /// <summary>Ligne de scan ambrée qui balaie de haut en bas (2,8 s).</summary>
-        private static Canvas BuildScanLine()
-        {
-            var c = new Canvas { IsHitTestVisible=false, ClipToBounds=true };
-
-            var glow = new Rectangle
+            if (File.Exists(SkylightningTheme.LogoV21Path))
             {
-                Width  = 400,
-                Height = 16,
-                Fill   = new LinearGradientBrush(
-                    new GradientStopCollection
-                    {
-                        new GradientStop(Color.FromArgb( 0, 255, 185, 30), 0.0),
-                        new GradientStop(Color.FromArgb(45, 255, 185, 30), 0.5),
-                        new GradientStop(Color.FromArgb( 0, 255, 185, 30), 1.0)
-                    },
-                    new Point(0, 0), new Point(0, 1))
-            };
-            var core = new Rectangle
-            {
-                Width  = 400,
-                Height = 1.5,
-                Fill   = new SolidColorBrush(Color.FromArgb(90, 255, 200, 50))
-            };
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.UriSource   = new Uri(SkylightningTheme.LogoV21Path);
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
 
-            Canvas.SetLeft(glow, 0); Canvas.SetTop(glow, 0);
-            Canvas.SetLeft(core, 0); Canvas.SetTop(core, 7);
-
-            var tt = new TranslateTransform(0, -16);
-            glow.RenderTransform = tt;
-            core.RenderTransform = tt;
-            c.Children.Add(glow);
-            c.Children.Add(core);
-
-            tt.BeginAnimation(TranslateTransform.YProperty,
-                new DoubleAnimation(-16, 420, new Duration(TimeSpan.FromMilliseconds(2800)))
-                { RepeatBehavior = RepeatBehavior.Forever });
-
-            return c;
-        }
-
-        /// <summary>Lueur radiale dorée pulsante centrée.</summary>
-        private static Ellipse BuildCenterGlow()
-        {
-            var e = new Ellipse
-            {
-                Width   = 260,
-                Height  = 200,
-                Opacity = 0,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment   = VerticalAlignment.Center,
-                IsHitTestVisible    = false,
-                Fill = new RadialGradientBrush(
-                    Color.FromArgb(40, 255, 185, 30),    // or ambre au centre
-                    Color.FromArgb( 0, 180, 120,  0))    // transparent en périphérie
-            };
-            e.BeginAnimation(UIElement.OpacityProperty,
-                new DoubleAnimation(0.3, 1.0, new Duration(TimeSpan.FromMilliseconds(1800)))
+                var img = new Image
                 {
-                    AutoReverse    = true,
-                    RepeatBehavior = RepeatBehavior.Forever,
-                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-                });
-            return e;
-        }
+                    Source              = bmp,
+                    Stretch             = Stretch.Uniform,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment   = VerticalAlignment.Center,
+                    Width               = 260,
+                    Height              = 260,
+                    Margin              = new Thickness(20)
+                };
+                RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                return img;
+            }
 
-        /// <summary>Logo centré — symbole SkyLight généré programmatiquement.</summary>
-        private static Image BuildLogoImage()
-        {
-            var img = new Image
+            var fallback = new Image
             {
-                Source              = SkyLightTheme.CreateSkyLightIcon(200),
+                Source              = SkylightningTheme.CreateSkylightningIcon(260),
                 Stretch             = Stretch.Uniform,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment   = VerticalAlignment.Center,
                 Margin              = new Thickness(20)
             };
-            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-            return img;
-        }
-
-        /// <summary>Coins HUD or calés sur HoloW × HoloH.</summary>
-        private static Canvas BuildCorners()
-        {
-            var c = new Canvas { Width = HoloW, Height = HoloH, IsHitTestVisible = false };
-            var b = new SolidColorBrush(Color.FromArgb(220, 255, 185, 30));  // or ambre
-            const double t = 1.5, len = 22, m = 8;
-            double w = HoloW, h = HoloH;
-
-            void L(double x1, double y1, double x2, double y2) =>
-                c.Children.Add(new Line { X1=x1, Y1=y1, X2=x2, Y2=y2, Stroke=b, StrokeThickness=t });
-
-            L(m,   m,     m+len, m    ); L(m,   m,    m,   m+len  );
-            L(w-m, m,     w-m-len, m  ); L(w-m, m,    w-m, m+len  );
-            L(m,   h-m,   m+len, h-m  ); L(m,   h-m,  m,   h-m-len);
-            L(w-m, h-m,   w-m-len,h-m ); L(w-m, h-m,  w-m, h-m-len);
-
-            return c;
+            RenderOptions.SetBitmapScalingMode(fallback, BitmapScalingMode.HighQuality);
+            return fallback;
         }
 
         // ─────────────────────────────────────────────────────────────────────
