@@ -18,7 +18,7 @@ namespace RevitLightingPlugin.Commands
                 "Norme   : EN 12464-1\n" +
                 "Moteur  : Radiosité Monte Carlo (64 rayons)\n\n" +
                 "© 2026 Soufiane Ben Ahmed Ghandri (Initium) — Tous droits réservés\n" +
-                "Contact : sofianeghandri@gmail.com";
+                "Contact : skylightning.support@gmail.com";
             dlg.Show();
             return Result.Succeeded;
         }
