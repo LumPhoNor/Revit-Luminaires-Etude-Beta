@@ -1,21 +1,18 @@
-MIT License
+Copyright (c) 2026 Soufiane Ben Ahmed Ghandri
+Tous droits réservés.
 
-Copyright (c) 2026 LumPhoNor
+Le présent logiciel, son code source, sa documentation et les éléments
+associés (y compris le nom "Skylightning" et les visuels/logos qui
+l'accompagnent) sont la propriété exclusive de Soufiane Ben Ahmed Ghandri.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Aucune partie de ce logiciel ne peut être copiée, modifiée, distribuée,
+sous-licenciée, revendue ou utilisée à des fins commerciales sans
+l'autorisation écrite préalable de l'auteur.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+L'accès au logiciel dans le cadre d'une phase de beta ne constitue pas une
+cession de droits : il accorde uniquement un droit d'usage personnel et
+non exclusif, à des fins d'évaluation, pendant la durée de la beta.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+CE LOGICIEL EST FOURNI "EN L'ÉTAT", SANS GARANTIE D'AUCUNE SORTE, EXPRESSE
+OU IMPLICITE. L'AUTEUR NE POURRA EN AUCUN CAS ÊTRE TENU RESPONSABLE DE TOUT
+DOMMAGE DÉCOULANT DE L'UTILISATION DE CE LOGICIEL.
