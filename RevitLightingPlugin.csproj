@@ -44,6 +44,9 @@
     <OutputPath>bin\x64\$(Configuration)\</OutputPath>
     <DefineConstants>$(DefineConstants);REVIT$(RevitVersion)</DefineConstants>
     <NoWarn>NU1701</NoWarn>
+    <!-- Revit charge le DLL directement (pas via deps.json) : les dependances NuGet
+         doivent etre copiees a cote du plugin, meme en net8.0-windows (R25/R26). -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(Configuration.StartsWith('Debug'))">
