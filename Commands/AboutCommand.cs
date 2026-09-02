@@ -17,7 +17,7 @@ namespace RevitLightingPlugin.Commands
                 "Version : 1.0.0\n" +
                 "Norme   : EN 12464-1\n" +
                 "Moteur  : Radiosité Monte Carlo (64 rayons)\n\n" +
-                "© 2026 Soufiane Ben Ahmed Ghandri (Initium) — Tous droits réservés\n" +
+                "© 2026 Soufiane Ben Ahmed Ghandri — Tous droits réservés\n" +
                 "Contact : skylightning.support@gmail.com";
             dlg.Show();
             return Result.Succeeded;
