@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using RevitLightingPlugin.UI;
 
 namespace RevitLightingPlugin.Core
 {
@@ -12,6 +14,8 @@ namespace RevitLightingPlugin.Core
         private string projectName;
         private string reportDate;
         private Font footerFont;
+        private BaseFont headerBaseFont;
+        private static readonly BaseColor HeaderBlue = new BaseColor(29, 78, 216); // #1D4ED8 (Skylightning)
 
         public PDFPageEventHelper(string projectName, string reportDate)
         {
@@ -19,11 +23,14 @@ namespace RevitLightingPlugin.Core
             this.reportDate = reportDate;
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
             footerFont = new Font(bf, 8, Font.NORMAL, BaseColor.GRAY);
+            headerBaseFont = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
         }
 
         public override void OnEndPage(PdfWriter writer, Document document)
         {
             base.OnEndPage(writer, document);
+
+            DrawHeader(writer, document);
 
             PdfPTable footer = new PdfPTable(3) { TotalWidth = document.PageSize.Width - 80 };
             footer.SetWidths(new float[] { 1f, 1f, 1f });
@@ -53,6 +60,52 @@ namespace RevitLightingPlugin.Core
             footer.AddCell(rightCell);
 
             footer.WriteSelectedRows(0, -1, 40, 30, writer.DirectContent);
+        }
+
+        /// <summary>
+        /// Dessine le logo Skylightning à gauche et le texte "Skylightning"
+        /// (Sky en noir, lightning en bleu) en en-tête de chaque page.
+        /// </summary>
+        private void DrawHeader(PdfWriter writer, Document document)
+        {
+            PdfContentByte cb = writer.DirectContent;
+            float pageHeight = document.PageSize.Height;
+            float marginLeft = document.LeftMargin;
+            float logoHeight = 26f;
+            float logoWidth = logoHeight;
+
+            try
+            {
+                if (File.Exists(SkylightningTheme.LogoRibbonIconPath))
+                {
+                    Image logo = Image.GetInstance(SkylightningTheme.LogoRibbonIconPath);
+                    logoWidth = logo.Width * (logoHeight / logo.Height);
+                    logo.ScaleToFit(logoWidth, logoHeight);
+                    logo.SetAbsolutePosition(marginLeft, pageHeight - 20 - logoHeight);
+                    cb.AddImage(logo);
+                }
+            }
+            catch { /* logo optionnel : le rapport reste valide sans lui */ }
+
+            float textX = marginLeft + logoWidth + 8;
+            float textY = pageHeight - 20 - (logoHeight / 2) - 5;
+            float fontSize = 14f;
+
+            cb.SaveState();
+            cb.BeginText();
+            cb.SetFontAndSize(headerBaseFont, fontSize);
+            cb.SetColorFill(BaseColor.BLACK);
+            cb.ShowTextAligned(Element.ALIGN_LEFT, "Sky", textX, textY, 0);
+            cb.EndText();
+
+            float skyWidth = headerBaseFont.GetWidthPoint("Sky", fontSize);
+
+            cb.BeginText();
+            cb.SetFontAndSize(headerBaseFont, fontSize);
+            cb.SetColorFill(HeaderBlue);
+            cb.ShowTextAligned(Element.ALIGN_LEFT, "lightning", textX + skyWidth, textY, 0);
+            cb.EndText();
+            cb.RestoreState();
         }
     }
 }
