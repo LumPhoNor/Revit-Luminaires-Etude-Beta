@@ -69,30 +69,6 @@ namespace RevitLightingPlugin.UI
             Content = SkylightningTheme.BuildDarkShell(mainGrid, 920, 620);
         }
 
-        private Image CreateLogoImage()
-        {
-            string logoPath = @"C:\Users\JEDI-Lee\Documents\Projets Plugin\Logo\Logo SkyLight.jpg";
-            if (System.IO.File.Exists(logoPath))
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(logoPath);
-                bmp.DecodePixelHeight = 90;
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-                return new Image
-                {
-                    Source = bmp,
-                    Height = 90,
-                    Stretch = System.Windows.Media.Stretch.Uniform,
-                    Margin = new Thickness(8),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-            }
-            return null;
-        }
-
         private UIElement CreateHeader()
         {
             return SkylightningTheme.BuildDarkHeader(
@@ -237,7 +213,32 @@ namespace RevitLightingPlugin.UI
             SearchTextBox.TextChanged += OnSearchTextChanged;
             panel.Children.Add(SearchTextBox);
 
+            var checkAllButton = new System.Windows.Controls.Button
+            {
+                Content = "☑ Tout cocher",
+                Width = 110,
+                Margin = new Thickness(0, 0, 5, 0)
+            };
+            checkAllButton.Click += (s, e) => SetAllRoomsSelected(true);
+            panel.Children.Add(checkAllButton);
+
+            var uncheckAllButton = new System.Windows.Controls.Button
+            {
+                Content = "☐ Tout décocher",
+                Width = 120
+            };
+            uncheckAllButton.Click += (s, e) => SetAllRoomsSelected(false);
+            panel.Children.Add(uncheckAllButton);
+
             return panel;
+        }
+
+        private void SetAllRoomsSelected(bool selected)
+        {
+            foreach (var roomVM in ((IEnumerable<RoomViewModel>)RoomListView.ItemsSource) ?? AllRooms)
+            {
+                roomVM.IsSelected = selected;
+            }
         }
 
         private StackPanel CreateFilterPanel()

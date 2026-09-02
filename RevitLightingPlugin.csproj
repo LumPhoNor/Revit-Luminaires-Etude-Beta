@@ -82,6 +82,10 @@
     <None Include="RevitLightingPlugin.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Assets\Logo\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Assets\Logo\%(Filename)%(Extension)</Link>
+    </None>
   </ItemGroup>
 
   <Target Name="DeployToRevitAddins" AfterTargets="Build">

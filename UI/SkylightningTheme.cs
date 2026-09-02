@@ -19,13 +19,19 @@ namespace RevitLightingPlugin.UI
     internal static class SkylightningTheme
     {
         // ── Chemin du logo ────────────────────────────────────────────────────
-        public const string LogoV21Path =
-            @"C:\Users\User\Documents\Projets Plugin\Logo\Nouveau icone Skylightning.png";
+        // Résolu relativement au dossier du plugin (Assets\Logo, copié au build) :
+        // un chemin absolu vers le poste du développeur ne suit pas le plugin sur
+        // une autre machine.
+        private static readonly string AssemblyDir =
+            System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+        public static readonly string LogoV21Path =
+            System.IO.Path.Combine(AssemblyDir, "Assets", "Logo", "Nouveau icone Skylightning.png");
 
         // Version recadrée (marge grise retirée) : le dessin remplit mieux les
         // petites icônes du ruban Revit (32/16 px), où le logo complet paraissait minuscule.
-        public const string LogoRibbonIconPath =
-            @"C:\Users\User\Documents\Projets Plugin\Logo\Nouveau icone Skylightning - Ruban.png";
+        public static readonly string LogoRibbonIconPath =
+            System.IO.Path.Combine(AssemblyDir, "Assets", "Logo", "Nouveau icone Skylightning - Ruban.png");
 
         // ── Palette gris neutre (aspect Revit) ───────────────────────────────
         // Fonds fenêtres

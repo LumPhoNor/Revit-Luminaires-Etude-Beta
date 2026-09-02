@@ -22,9 +22,6 @@ namespace RevitLightingPlugin.UI
         private ShapePath _bulbFillPath;
         private RectangleGeometry _bulbClip;
 
-        private const string LogoPath =
-            @"C:\Users\User\Documents\Projets Plugin\Logo\Logo symbole V3 sans fond .jpg";
-
         // Icône ampoule (Material Design "lightbulb", viewBox 24x24)
         private const string BulbGeometryData =
             "M9,21c0,0.55,0.45,1,1,1h4c0.55,0,1-0.45,1-1v-1H9V21z " +
