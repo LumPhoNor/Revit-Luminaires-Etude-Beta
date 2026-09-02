@@ -26,12 +26,44 @@ namespace RevitLightingPlugin
             _calculButton.Image      = CreateCalcIcon(ready);
         }
 
+#if NET8_0_OR_GREATER
+        /// <summary>
+        /// Revit charge le plugin hors du mecanisme deps.json standard de .NET :
+        /// la resolution native par defaut ne trouve pas SQLite.Interop.dll dans
+        /// runtimes\{rid}\native\ a cote du plugin (fonctionnait tel quel en
+        /// .NET Framework/R24). On resout donc le chemin nous-memes.
+        /// </summary>
+        private static void RegisterSQLiteNativeResolver()
+        {
+            var sqliteAssembly = typeof(System.Data.SQLite.SQLiteConnection).Assembly;
+            System.Runtime.InteropServices.NativeLibrary.SetDllImportResolver(sqliteAssembly, (name, assembly, searchPath) =>
+            {
+                if (!string.Equals(name, "SQLite.Interop.dll", StringComparison.OrdinalIgnoreCase))
+                    return IntPtr.Zero;
+
+                string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string rid = Environment.Is64BitProcess ? "win-x64" : "win-x86";
+                string nativePath = Path.Combine(pluginDir, "runtimes", rid, "native", "SQLite.Interop.dll");
+
+                if (File.Exists(nativePath))
+                    return System.Runtime.InteropServices.NativeLibrary.Load(nativePath);
+
+                Logger.Warning("Application", $"SQLite.Interop.dll introuvable à '{nativePath}'");
+                return IntPtr.Zero;
+            });
+        }
+#endif
+
         public Result OnStartup(UIControlledApplication application)
         {
             Logger.Initialize();
             Logger.Separator("APPLICATION STARTUP");
             Logger.Info("Application", "Démarrage du plugin Skylightning");
             Logger.EnterMethod("Application", "OnStartup");
+
+#if NET8_0_OR_GREATER
+            RegisterSQLiteNativeResolver();
+#endif
 
             try
             {
