@@ -15,8 +15,10 @@ namespace RevitLightingPlugin.Core
         private string reportDate;
         private Font footerFont;
         private BaseFont headerBaseFont;
+        private BaseFont smallBaseFont;
         private static readonly BaseColor HeaderBlue = new BaseColor(29, 78, 216);  // #1D4ED8 (Skylightning — "lightning")
         private static readonly BaseColor HeaderInk  = new BaseColor(17, 24, 39);   // #111827 (Skylightning — "Sky", identique au site)
+        private static readonly BaseColor InitiumGray = new BaseColor(107, 114, 128); // #6B7280
 
         public PDFPageEventHelper(string projectName, string reportDate)
         {
@@ -24,6 +26,7 @@ namespace RevitLightingPlugin.Core
             this.reportDate = reportDate;
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
             footerFont = new Font(bf, 8, Font.NORMAL, BaseColor.GRAY);
+            smallBaseFont = bf;
 
             // Même police que le logo texte du site vitrine (Playfair Display, graisse
             // Black/900), embarquée dans le plugin. Repli sur Helvetica Bold si le
@@ -121,6 +124,29 @@ namespace RevitLightingPlugin.Core
             cb.SetColorFill(HeaderBlue);
             cb.ShowTextAligned(Element.ALIGN_LEFT, "lightning", textX + skyWidth, textY, 0);
             cb.EndText();
+
+            // Trait noir sous le titre (démarre sous le "S" de Sky) allant presque au
+            // bord de page, en laissant la place à "Initium" en gris avant la fin.
+            float pageWidth = document.PageSize.Width;
+            float marginRight = document.RightMargin;
+            float lineY = textY - 8f;
+            float initiumFontSize = 10f;
+            string initiumText = "Initium";
+            float initiumWidth = smallBaseFont.GetWidthPoint(initiumText, initiumFontSize);
+            float lineEndX = pageWidth - marginRight - initiumWidth - 12f;
+
+            cb.SetLineWidth(1f);
+            cb.SetColorStroke(BaseColor.BLACK);
+            cb.MoveTo(textX, lineY);
+            cb.LineTo(lineEndX, lineY);
+            cb.Stroke();
+
+            cb.BeginText();
+            cb.SetFontAndSize(smallBaseFont, initiumFontSize);
+            cb.SetColorFill(InitiumGray);
+            cb.ShowTextAligned(Element.ALIGN_RIGHT, initiumText, pageWidth - marginRight, lineY - (initiumFontSize / 2f) + 2f, 0);
+            cb.EndText();
+
             cb.RestoreState();
         }
     }
