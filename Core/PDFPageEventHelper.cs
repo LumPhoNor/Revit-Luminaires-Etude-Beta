@@ -16,9 +16,15 @@ namespace RevitLightingPlugin.Core
         private Font footerFont;
         private BaseFont headerBaseFont;
         private BaseFont smallBaseFont;
+        private BaseFont smallBoldBaseFont;
         private static readonly BaseColor HeaderBlue = new BaseColor(29, 78, 216);  // #1D4ED8 (Skylightning — "lightning")
         private static readonly BaseColor HeaderInk  = new BaseColor(17, 24, 39);   // #111827 (Skylightning — "Sky", identique au site)
-        private static readonly BaseColor InitiumGray = new BaseColor(107, 114, 128); // #6B7280
+
+        // "Initium" — effet gris métal avec léger volume (reflet clair + ombre portée
+        // autour d'une teinte métal médiane).
+        private static readonly BaseColor MetalBase      = new BaseColor(140, 146, 156);
+        private static readonly BaseColor MetalHighlight = new BaseColor(220, 223, 228);
+        private static readonly BaseColor MetalShadow    = new BaseColor(70, 74, 84);
 
         public PDFPageEventHelper(string projectName, string reportDate)
         {
@@ -27,6 +33,7 @@ namespace RevitLightingPlugin.Core
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
             footerFont = new Font(bf, 8, Font.NORMAL, BaseColor.GRAY);
             smallBaseFont = bf;
+            smallBoldBaseFont = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
 
             // Même police que le logo texte du site vitrine (Playfair Display, graisse
             // Black/900), embarquée dans le plugin. Repli sur Helvetica Bold si le
@@ -132,7 +139,7 @@ namespace RevitLightingPlugin.Core
             float lineY = textY - 8f;
             float initiumFontSize = 10f;
             string initiumText = "Initium";
-            float initiumWidth = smallBaseFont.GetWidthPoint(initiumText, initiumFontSize);
+            float initiumWidth = smallBoldBaseFont.GetWidthPoint(initiumText, initiumFontSize);
             float lineEndX = pageWidth - marginRight - initiumWidth - 12f;
 
             cb.SetLineWidth(1f);
@@ -141,10 +148,29 @@ namespace RevitLightingPlugin.Core
             cb.LineTo(lineEndX, lineY);
             cb.Stroke();
 
+            // "Initium" en gris métal : reflet clair décalé haut-gauche + ombre portée
+            // décalée bas-droite autour de la teinte métal médiane, pour un léger effet
+            // de volume/relief.
+            float initiumX = pageWidth - marginRight;
+            float initiumY = lineY - (initiumFontSize / 2f) + 2f;
+            float bevel = 0.4f;
+
             cb.BeginText();
-            cb.SetFontAndSize(smallBaseFont, initiumFontSize);
-            cb.SetColorFill(InitiumGray);
-            cb.ShowTextAligned(Element.ALIGN_RIGHT, initiumText, pageWidth - marginRight, lineY - (initiumFontSize / 2f) + 2f, 0);
+            cb.SetFontAndSize(smallBoldBaseFont, initiumFontSize);
+            cb.SetColorFill(MetalShadow);
+            cb.ShowTextAligned(Element.ALIGN_RIGHT, initiumText, initiumX + bevel, initiumY - bevel, 0);
+            cb.EndText();
+
+            cb.BeginText();
+            cb.SetFontAndSize(smallBoldBaseFont, initiumFontSize);
+            cb.SetColorFill(MetalHighlight);
+            cb.ShowTextAligned(Element.ALIGN_RIGHT, initiumText, initiumX - bevel, initiumY + bevel, 0);
+            cb.EndText();
+
+            cb.BeginText();
+            cb.SetFontAndSize(smallBoldBaseFont, initiumFontSize);
+            cb.SetColorFill(MetalBase);
+            cb.ShowTextAligned(Element.ALIGN_RIGHT, initiumText, initiumX, initiumY, 0);
             cb.EndText();
 
             cb.RestoreState();

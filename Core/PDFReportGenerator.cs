@@ -310,7 +310,10 @@ namespace RevitLightingPlugin.Core
                     try
                     {
                         iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(hr.GridMapPath);
-                        img.ScaleToFit(515f, 660f);
+                        // Hauteur limitee pour que le titre "CARTE DE GRILLE D'ECLAIRAGE" et
+                        // l'image restent sur la meme page (la marge haute du header reduit
+                        // l'espace disponible sous le titre).
+                        img.ScaleToFit(515f, 600f);
                         img.Alignment = PdfElement.ALIGN_CENTER;
                         pdfDocument.Add(img);
                     }
