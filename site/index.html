@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skylightning — Calcul d'éclairement directement dans Revit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cream: #F9F7F4; --white: #FFFFFF; --ink: #111827;
+      --ink-mid: #374151; --ink-light: #6B7280;
+      --accent: #1D4ED8; --accent-hover: #1E40AF;
+      --accent-light: #EFF6FF; --accent-border: #BFDBFE;
+      --gold: #B45309; --green: #065F46; --green-bg: #ECFDF5;
+      --border: #E5E7EB;
+      --shadow: 0 2px 16px rgba(17,24,39,0.07);
+      --shadow-lg: 0 8px 40px rgba(17,24,39,0.13);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); line-height: 1.65; overflow-x: hidden; }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes grow { from { width:0; } to { width:87%; } }
+    .anim { opacity:0; animation: fadeUp 0.7s ease forwards; }
+    .anim-d1{animation-delay:0.1s;} .anim-d2{animation-delay:0.25s;}
+    .anim-d3{animation-delay:0.4s;} .anim-d4{animation-delay:0.55s;}
+
+    /* NAV */
+    nav { position:fixed; top:0; left:0; right:0; z-index:200; background:rgba(249,247,244,0.93); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); height:68px; display:flex; align-items:center; justify-content:space-between; padding:0 6%; }
+    .nav-logo { font-family:'Playfair Display',serif; font-weight:900; font-size:1.45rem; color:var(--ink); text-decoration:none; letter-spacing:-0.5px; }
+    .nav-logo span { color:var(--accent); }
+    .nav-links { display:flex; gap:2rem; list-style:none; align-items:center; }
+    .nav-links a { text-decoration:none; color:var(--ink-mid); font-size:0.875rem; font-weight:500; transition:color 0.2s; }
+    .nav-links a:hover { color:var(--accent); }
+    .btn-nav { background:var(--accent); color:white !important; padding:0.5rem 1.25rem; border-radius:8px; transition:background 0.2s !important; }
+    .btn-nav:hover { background:var(--accent-hover) !important; }
+    .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; }
+    .hamburger span { width:24px; height:2px; background:var(--ink); border-radius:2px; }
+    .nav-links.open { display:flex !important; flex-direction:column; position:fixed; top:68px; left:0; right:0; background:rgba(249,247,244,0.97); padding:2rem 6%; border-bottom:1px solid var(--border); gap:1.5rem; backdrop-filter:blur(14px); z-index:199; }
+    /* Focus accessibilité */
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
+
+    /* HERO */
+    #hero { min-height:100vh; display:flex; align-items:center; padding:100px 6% 80px; background:linear-gradient(135deg,#F0F7FF 0%,var(--cream) 60%); position:relative; overflow:hidden; }
+    #hero::before { content:''; position:absolute; top:-120px; right:-80px; width:600px; height:600px; background:radial-gradient(circle,rgba(29,78,216,0.07) 0%,transparent 70%); border-radius:50%; pointer-events:none; }
+    .hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center; max-width:1200px; margin:0 auto; width:100%; }
+    .hero-badge { display:inline-flex; align-items:center; gap:0.5rem; background:var(--accent-light); border:1px solid var(--accent-border); color:var(--accent); font-size:0.78rem; font-weight:600; padding:0.35rem 0.9rem; border-radius:99px; margin-bottom:1.5rem; letter-spacing:0.03em; text-transform:uppercase; }
+    h1 { font-family:'Playfair Display',serif; font-size:clamp(2.2rem,4vw,3.4rem); font-weight:900; line-height:1.15; color:var(--ink); letter-spacing:-1px; margin-bottom:1.25rem; }
+    h1 em { color:var(--accent); font-style:normal; }
+    .hero-sub { font-size:1.05rem; color:var(--ink-mid); max-width:500px; margin-bottom:2rem; font-weight:300; line-height:1.75; }
+    .hero-sub strong { color:var(--ink); font-weight:600; }
+    .hero-actions { display:flex; gap:1rem; flex-wrap:wrap; }
+    .btn-primary { background:var(--accent); color:white; padding:0.85rem 2rem; border-radius:10px; font-size:0.95rem; font-weight:600; text-decoration:none; transition:all 0.2s; box-shadow:0 4px 14px rgba(29,78,216,0.25); cursor:pointer; border:none; font-family:'DM Sans',sans-serif; }
+    .btn-primary:hover { background:var(--accent-hover); transform:translateY(-2px); }
+    .btn-secondary { background:white; color:var(--ink); padding:0.85rem 2rem; border-radius:10px; font-size:0.95rem; font-weight:600; text-decoration:none; transition:all 0.2s; border:1.5px solid var(--border); }
+    .btn-secondary:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); }
+    .hero-visual { background:white; border-radius:20px; box-shadow:var(--shadow-lg); padding:2rem; border:1px solid var(--border); position:relative; }
+    .hero-visual::before { content:'REVIT + SKYLIGHTNING'; position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.7rem; font-weight:700; letter-spacing:0.1em; padding:0.3rem 1rem; border-radius:99px; white-space:nowrap; }
+    .revit-mock { background:#1E293B; border-radius:12px; padding:1.25rem; font-family:'Courier New',monospace; font-size:0.78rem; color:#94A3B8; }
+    .revit-mock .line { margin-bottom:0.4rem; display:flex; gap:0.75rem; align-items:center; }
+    .revit-mock .ok{color:#34D399;} .revit-mock .val{color:#60A5FA;} .revit-mock .warn{color:#FBBF24;} .revit-mock .label{color:#E2E8F0;}
+    .progress-bar { height:6px; background:#334155; border-radius:99px; margin:1rem 0 0.5rem; overflow:hidden; }
+    .progress-fill { height:100%; width:0; background:linear-gradient(90deg,#3B82F6,#34D399); border-radius:99px; animation:grow 1.5s 0.8s ease forwards; }
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin-top:1rem; }
+    .stat-box { background:var(--accent-light); border:1px solid var(--accent-border); border-radius:10px; padding:0.75rem; text-align:center; }
+    .stat-box .num { font-size:1.3rem; font-weight:700; color:var(--accent); font-family:'Playfair Display',serif; }
+    .stat-box .lbl { font-size:0.7rem; color:var(--ink-light); margin-top:0.2rem; }
+
+    /* SECTIONS */
+    section { padding:100px 6%; }
+    #problem{background:white;} #features{background:var(--cream);} #beta{background:var(--ink);}
+    #feedback{background:white;} #docs{background:var(--cream);} #contact{background:white;}
+
+    .section-label { font-size:0.75rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--accent); margin-bottom:0.75rem; }
+    h2 { font-family:'Playfair Display',serif; font-size:clamp(1.8rem,3vw,2.6rem); font-weight:800; line-height:1.2; letter-spacing:-0.5px; margin-bottom:1.25rem; }
+
+    /* PROBLEM */
+    .comparison { display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:3rem; max-width:900px; }
+    .comp-card { border-radius:16px; padding:2rem; border:1.5px solid var(--border); }
+    .comp-card.before { background:#FFF7ED; border-color:#FED7AA; }
+    .comp-card.after { background:var(--accent-light); border-color:var(--accent-border); }
+    .comp-title { font-weight:700; font-size:0.85rem; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:1.25rem; }
+    .comp-card.before .comp-title{color:#C2410C;} .comp-card.after .comp-title{color:var(--accent);}
+    .comp-item { display:flex; gap:0.75rem; align-items:flex-start; margin-bottom:0.85rem; font-size:0.9rem; color:var(--ink-mid); }
+
+    /* FEATURES */
+    .features-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1.5rem; margin-top:3rem; max-width:1100px; }
+    .feat-card { background:white; border-radius:16px; padding:2rem; border:1px solid var(--border); box-shadow:var(--shadow); transition:transform 0.2s,box-shadow 0.2s; }
+    .feat-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); }
+    .feat-icon { width:52px; height:52px; border-radius:14px; background:var(--accent-light); border:1px solid var(--accent-border); display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin-bottom:1.25rem; }
+    .feat-card h3 { font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:700; margin-bottom:0.6rem; }
+    .feat-card p { font-size:0.9rem; color:var(--ink-mid); line-height:1.7; }
+    .feat-tag { display:inline-block; margin-top:1rem; background:var(--green-bg); color:var(--green); font-size:0.72rem; font-weight:600; letter-spacing:0.05em; padding:0.25rem 0.7rem; border-radius:99px; text-transform:uppercase; }
+
+    /* BETA */
+    #beta { background:var(--ink); }
+    #beta .section-label { color:#60A5FA; }
+    #beta h2 { color:white; }
+    .beta-grid { display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center; max-width:1100px; }
+    .beta-desc { color:rgba(255,255,255,0.7); font-size:0.95rem; margin-bottom:2rem; line-height:1.8; }
+    .beta-desc strong { color:white; }
+    .beta-perks { list-style:none; margin-bottom:2.5rem; }
+    .beta-perks li { display:flex; gap:0.75rem; align-items:center; color:rgba(255,255,255,0.8); font-size:0.9rem; padding:0.6rem 0; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .beta-perks li span:first-child { font-size:1.1rem; }
+    .beta-card { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:2.5rem; text-align:center; }
+    .beta-badge { display:inline-block; background:linear-gradient(135deg,#F59E0B,#EF4444); color:white; font-size:0.75rem; font-weight:700; letter-spacing:0.1em; padding:0.4rem 1rem; border-radius:99px; text-transform:uppercase; margin-bottom:1.5rem; }
+    .beta-price { font-family:'Playfair Display',serif; font-size:4rem; font-weight:900; color:white; line-height:1; margin-bottom:0.25rem; }
+    .beta-price sub { font-size:1.5rem; font-weight:400; vertical-align:bottom; }
+    .beta-period { color:rgba(255,255,255,0.5); font-size:0.85rem; margin-bottom:0.5rem; }
+    .beta-duration { color:#34D399; font-size:0.85rem; font-weight:600; margin-bottom:2rem; }
+    .btn-beta { display:block; background:white; color:var(--ink); padding:1rem; border-radius:12px; font-weight:700; font-size:1rem; text-decoration:none; transition:all 0.2s; margin-bottom:1rem; }
+    .btn-beta:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+    .beta-note { color:rgba(255,255,255,0.4); font-size:0.78rem; }
+    .countdown { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin:1.5rem 0; }
+    .count-box { background:rgba(255,255,255,0.08); border-radius:10px; padding:0.75rem 0.5rem; }
+    .count-box .num { font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:900; color:white; }
+    .count-box .lbl { font-size:0.65rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.05em; }
+
+    /* FEEDBACK SITE */
+    #feedback { background:white; }
+    .feedback-wrap { display:grid; grid-template-columns:1fr 1.2fr; gap:4rem; align-items:start; max-width:1100px; }
+    .feedback-info h2 { margin-bottom:1rem; }
+    .feedback-info p { color:var(--ink-mid); font-size:0.95rem; margin-bottom:2rem; }
+    .feedback-why { display:flex; flex-direction:column; gap:1rem; }
+    .why-item { display:flex; gap:1rem; align-items:flex-start; }
+    .why-icon { width:40px; height:40px; border-radius:10px; background:var(--accent-light); border:1px solid var(--accent-border); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+    .why-text strong { display:block; font-size:0.88rem; color:var(--ink); margin-bottom:0.2rem; }
+    .why-text span { font-size:0.82rem; color:var(--ink-light); }
+
+    /* FORMULAIRE FEEDBACK */
+    .feedback-form-wrap { background:var(--cream); border-radius:20px; padding:2rem; border:1px solid var(--border); }
+    .feedback-form-wrap h3 { font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; margin-bottom:0.4rem; }
+    .feedback-form-wrap .sub { font-size:0.82rem; color:var(--ink-light); margin-bottom:1.5rem; }
+    .star-row { display:flex; gap:0.5rem; margin-bottom:1.25rem; }
+    .star { font-size:2rem; cursor:pointer; transition:transform 0.15s; opacity:0.3; }
+    .star.active { opacity:1; }
+    .star:hover { transform:scale(1.2); }
+    .cat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; margin-bottom:1.25rem; }
+    .cat-btn { padding:0.6rem; border-radius:8px; border:1.5px solid var(--border); background:white; font-family:'DM Sans',sans-serif; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all 0.2s; text-align:center; }
+    .cat-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .cat-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .cat-btn.bug.active { background:#DC2626; border-color:#DC2626; }
+    .cat-btn.suggestion.active { background:#7C3AED; border-color:#7C3AED; }
+    .cat-btn.compliment.active { background:var(--green); border-color:var(--green); }
+    form { display:flex; flex-direction:column; gap:1rem; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    label { font-size:0.82rem; font-weight:600; color:var(--ink-mid); margin-bottom:0.3rem; display:block; }
+    input, textarea, select { width:100%; padding:0.8rem 1rem; border:1.5px solid var(--border); border-radius:10px; font-family:'DM Sans',sans-serif; font-size:0.9rem; background:white; color:var(--ink); transition:border-color 0.2s; outline:none; }
+    input:focus, textarea:focus, select:focus { border-color:var(--accent); }
+    textarea { resize:vertical; min-height:110px; }
+    .btn-submit { background:var(--accent); color:white; padding:0.9rem 2rem; border-radius:10px; font-size:0.95rem; font-weight:600; border:none; cursor:pointer; transition:all 0.2s; width:100%; font-family:'DM Sans',sans-serif; }
+    .btn-submit:hover { background:var(--accent-hover); transform:translateY(-1px); }
+
+    /* DOCS */
+    .docs-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-top:3rem; max-width:1000px; }
+    .doc-card { background:white; border-radius:14px; padding:1.5rem; border:1px solid var(--border); text-decoration:none; color:var(--ink); transition:all 0.2s; display:block; }
+    .doc-card:hover { border-color:var(--accent); box-shadow:var(--shadow); transform:translateY(-2px); }
+    .doc-card .doc-icon { font-size:1.75rem; margin-bottom:0.75rem; }
+    .doc-card h4 { font-weight:700; font-size:0.95rem; margin-bottom:0.4rem; }
+    .doc-card p { font-size:0.82rem; color:var(--ink-light); }
+
+    /* CONTACT */
+    .contact-wrap { display:grid; grid-template-columns:1fr 1fr; gap:4rem; max-width:1000px; align-items:start; }
+    .contact-info p { color:var(--ink-mid); font-size:0.95rem; margin-bottom:2rem; margin-top:0.5rem; }
+    .contact-detail { display:flex; gap:1rem; align-items:center; margin-bottom:1.25rem; }
+    .contact-detail .icon { width:44px; height:44px; border-radius:12px; background:var(--accent-light); border:1px solid var(--accent-border); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+    .contact-detail .text strong { display:block; font-size:0.85rem; color:var(--ink); }
+    .contact-detail .text span { font-size:0.82rem; color:var(--ink-light); }
+
+    /* FOOTER */
+    footer { background:var(--ink); color:rgba(255,255,255,0.55); padding:3rem 6% 2rem; }
+    .footer-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2.5rem; flex-wrap:wrap; gap:2rem; }
+    .footer-brand p { font-size:0.82rem; margin-top:0.6rem; max-width:260px; line-height:1.6; }
+    .footer-links h5 { color:white; font-size:0.82rem; font-weight:700; margin-bottom:1rem; letter-spacing:0.05em; text-transform:uppercase; }
+    .footer-links ul { list-style:none; }
+    .footer-links ul li { margin-bottom:0.5rem; }
+    .footer-links ul li a { color:rgba(255,255,255,0.5); text-decoration:none; font-size:0.85rem; transition:color 0.2s; }
+    .footer-links ul li a:hover { color:white; }
+    .footer-bottom { border-top:1px solid rgba(255,255,255,0.1); padding-top:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; }
+    .footer-bottom span { font-size:0.8rem; }
+
+    #toast { position:fixed; bottom:2rem; right:2rem; z-index:999; background:#059669; color:white; padding:1rem 1.5rem; border-radius:12px; font-size:0.88rem; font-weight:500; box-shadow:var(--shadow-lg); transform:translateY(100px); opacity:0; transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1); display:flex; gap:0.6rem; align-items:center; }
+    #toast.show { transform:translateY(0); opacity:1; }
+    #toast.warn { background:#D97706; }
+
+    @media (max-width:900px) {
+      .hero-grid,.comparison,.features-grid,.beta-grid,.feedback-wrap,.contact-wrap { grid-template-columns:1fr; }
+      .docs-grid { grid-template-columns:1fr 1fr; }
+      .nav-links { display:none; }
+      .hamburger { display:flex; }
+    }
+    @media (max-width:600px) {
+      .docs-grid,.form-row,.cat-row { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">Sky<span>lightning</span></a>
+  <ul class="nav-links">
+    <li><a href="#features">Fonctionnalités</a></li>
+    <li><a href="#beta">Beta gratuite</a></li>
+    <li><a href="#feedback">Feedback</a></li>
+    <li><a href="#docs">Documentation</a></li>
+    <li><a href="#beta" class="btn-nav">🚀 Accès Beta</a></li>
+  </ul>
+  <div class="hamburger" onclick="toggleMenu()" aria-label="Menu principal" aria-expanded="false" role="button" tabindex="0">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-badge anim anim-d1">⚡ Plugin Revit — Calcul d'éclairement</div>
+      <h1 class="anim anim-d2">L'éclairage parfait,<br/>calculé là où<br/><em>vous concevez</em></h1>
+      <p class="hero-sub anim anim-d3">
+        Skylightning calcule vos <strong>études d'éclairement directement dans Revit</strong>,
+        à partir de votre implantation existante. Conformité <strong>EN 12464</strong>,
+        faux-couleurs et rapport PDF en quelques clics.
+      </p>
+      <div class="hero-actions anim anim-d4">
+        <a href="#beta" class="btn-primary">🚀 Accès Beta Gratuit</a>
+        <a href="#features" class="btn-secondary">Voir les fonctionnalités</a>
+      </div>
+    </div>
+    <div class="hero-visual anim anim-d3">
+      <div class="revit-mock">
+        <div class="line"><span class="ok">✓</span><span class="label">Zone détectée</span><span class="val">Bureau Open-Space (247 m²)</span></div>
+        <div class="line"><span class="ok">✓</span><span class="label">Luminaires</span><span class="val">48 × Downlight LED 36W</span></div>
+        <div class="line"><span class="ok">✓</span><span class="label">Flux total</span><span class="val">172 800 lm</span></div>
+        <div class="line"><span class="warn">▶</span><span class="label">Calcul EN 12464</span><span class="val">en cours...</span></div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="line"><span class="ok">✓</span><span class="label">Éclairement moyen</span><span class="val">498 lux — <span class="ok">CONFORME</span></span></div>
+        <div class="line"><span class="ok">✓</span><span class="label">Uniformité U₀</span><span class="val">0.72 — <span class="ok">CONFORME</span></span></div>
+        <div class="line"><span class="ok">📄</span><span class="label">Rapport PDF</span><span class="val">Généré avec succès</span></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="num">−80%</div><div class="lbl">Temps de saisie</div></div>
+        <div class="stat-box"><div class="num">EN 12464</div><div class="lbl">Norme vérifiée</div></div>
+        <div class="stat-box"><div class="num">100%</div><div class="lbl">Dans Revit</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLÈME -->
+<section id="problem">
+  <div class="section-label">Le problème</div>
+  <h2>Pourquoi resaisir ce que<br/>vous avez déjà modélisé ?</h2>
+  <p style="color:var(--ink-mid); max-width:580px; font-size:0.95rem;">
+    Chaque professionnel de la conception le sait : après une implantation dans Revit,
+    il faut recommencer depuis zéro dans un autre logiciel. Une perte de temps considérable,
+    des risques d'erreur, et une source de frustration quotidienne.
+  </p>
+  <div class="comparison">
+    <div class="comp-card before">
+      <div class="comp-title">❌ Avant Skylightning</div>
+      <div class="comp-item"><span>🔁</span>Implantation complète dans Revit</div>
+      <div class="comp-item"><span>🔁</span>Resaisie manuelle dans un second logiciel</div>
+      <div class="comp-item"><span>⏱</span>2 à 4 heures de travail supplémentaire</div>
+      <div class="comp-item"><span>⚠️</span>Risque d'erreurs entre les deux modèles</div>
+      <div class="comp-item"><span>💸</span>Coût en temps important par projet</div>
+    </div>
+    <div class="comp-card after">
+      <div class="comp-title">✅ Avec Skylightning</div>
+      <div class="comp-item"><span>✔️</span>Implantation dans Revit (une seule fois)</div>
+      <div class="comp-item"><span>✔️</span>Calcul d'éclairement directement intégré</div>
+      <div class="comp-item"><span>⚡</span>Résultats en quelques minutes</div>
+      <div class="comp-item"><span>✔️</span>Zéro erreur de resaisie possible</div>
+      <div class="comp-item"><span>💰</span>Gain de temps massif par projet</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">Fonctionnalités</div>
+  <h2>Tout ce dont vous avez<br/>besoin, dans Revit</h2>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">💡</div>
+      <h3>Calcul du flux lumineux</h3>
+      <p>Skylightning lit automatiquement vos luminaires Revit (type, puissance, rendement) et calcule le flux total par zone et par local, sans aucune resaisie.</p>
+      <span class="feat-tag">Automatique</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📋</div>
+      <h3>Vérification norme EN 12464</h3>
+      <p>Chaque calcul est confronté aux exigences de la norme EN 12464 (éclairement moyen, uniformité U₀, éblouissement UGR). Résultat conforme / non-conforme instantané.</p>
+      <span class="feat-tag">Conformité</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎨</div>
+      <h3>Rendu visuel faux-couleurs</h3>
+      <p>Visualisez la répartition lumineuse de vos locaux directement dans Revit grâce à un rendu faux-couleurs superposé à votre maquette. Identifiez les zones sombres d'un coup d'œil.</p>
+      <span class="feat-tag">Visuel</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <h3>Export rapport PDF</h3>
+      <p>Générez en un clic un rapport d'étude d'éclairement complet : récapitulatif des locaux, résultats de calcul, conformité normative et cartographie lumineuse.</p>
+      <span class="feat-tag">Export</span>
+    </div>
+  </div>
+</section>
+
+<!-- BETA -->
+<section id="beta">
+  <div class="beta-grid">
+    <div>
+      <div class="section-label">Accès Beta</div>
+      <h2>Testez Skylightning<br/>gratuitement<br/><span style="color:#60A5FA">pendant 30 jours</span></h2>
+      <p class="beta-desc">
+        Skylightning est en version Beta. Nous offrons un accès <strong>100% gratuit pendant 30 jours</strong>
+        à partir de votre téléchargement. En échange, votre retour d'expérience nous aide à
+        construire le meilleur outil possible pour tous les professionnels de la conception.
+      </p>
+      <ul class="beta-perks">
+        <li><span>✅</span><span>Accès à toutes les fonctionnalités sans restriction</span></li>
+        <li><span>✅</span><span>Aucune carte bancaire requise</span></li>
+        <li><span>✅</span><span>30 jours à partir de votre installation</span></li>
+        <li><span>✅</span><span>Support direct avec l'équipe Skylightning</span></li>
+        <li><span>✅</span><span>Vos retours influencent directement les futures versions</span></li>
+      </ul>
+    </div>
+    <div class="beta-card">
+      <div class="beta-badge">🎉 Version Beta — Offre de lancement</div>
+      <div class="beta-price"><sub>€</sub>0</div>
+      <div class="beta-period">pendant la période Beta</div>
+      <div class="beta-duration" style="margin-bottom:1.5rem;">
+        <span style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);padding:0.4rem 1rem;border-radius:99px;font-size:0.82rem;">
+          ⏱ Période d'essai de <strong style="color:#34D399;margin-left:0.3rem;">30 jours</strong>&nbsp;à l'installation
+        </span>
+      </div>
+      <form id="betaForm" onsubmit="handleBetaDownload(event)" style="text-align:left;">
+        <div style="margin-bottom:0.85rem;">
+          <label style="font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.5);display:block;margin-bottom:0.35rem;letter-spacing:0.05em;text-transform:uppercase;">Prénom *</label>
+          <input type="text" name="prenom" placeholder="Votre prénom" required style="width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:white;font-family:DM Sans,sans-serif;font-size:0.9rem;outline:none;"/>
+        </div>
+        <div style="margin-bottom:1.25rem;">
+          <label style="font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.5);display:block;margin-bottom:0.35rem;letter-spacing:0.05em;text-transform:uppercase;">Email *</label>
+          <input type="email" name="email" placeholder="votre@email.com" required style="width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:white;font-family:DM Sans,sans-serif;font-size:0.9rem;outline:none;"/>
+        </div>
+        <button type="submit" class="btn-beta" style="margin-bottom:0.75rem;">⬇️ Télécharger la Beta gratuitement</button>
+      </form>
+      <p class="beta-note">Aucun engagement · Pas de carte bancaire · 30 jours offerts</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEEDBACK -->
+<section id="feedback">
+  <div class="feedback-wrap">
+    <div class="feedback-info">
+      <div class="section-label">Feedback Beta</div>
+      <h2>Votre avis construit<br/>Skylightning</h2>
+      <p>Chaque retour reçu est lu personnellement et pris en compte dans les mises à jour. Vous êtes les premiers utilisateurs — votre expérience est précieuse.</p>
+      <div class="feedback-why">
+        <div class="why-item">
+          <div class="why-icon">🔧</div>
+          <div class="why-text">
+            <strong>Signaler un bug</strong>
+            <span>Un comportement inattendu ? Dites-le nous, on corrige rapidement.</span>
+          </div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">💡</div>
+          <div class="why-text">
+            <strong>Suggérer une fonctionnalité</strong>
+            <span>Vous avez une idée qui manque ? Elle pourrait être dans la prochaine version.</span>
+          </div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">⭐</div>
+          <div class="why-text">
+            <strong>Partager votre expérience</strong>
+            <span>Un retour positif nous encourage et nous guide dans la bonne direction.</span>
+          </div>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">📊</div>
+          <div class="why-text">
+            <strong>Tableau de bord disponible</strong>
+            <span>Tous vos feedbacks sont visibles dans le dashboard admin Skylightning.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feedback-form-wrap">
+      <h3>Laisser un feedback</h3>
+      <p class="sub">Disponible aussi directement depuis le plugin dans Revit</p>
+
+      <form id="feedbackForm" onsubmit="handleFeedback(event)">
+        <!-- NOTE ÉTOILES -->
+        <div>
+          <label>Note globale *</label>
+          <div class="star-row" id="stars">
+            <span class="star" data-val="1">★</span>
+            <span class="star" data-val="2">★</span>
+            <span class="star" data-val="3">★</span>
+            <span class="star" data-val="4">★</span>
+            <span class="star" data-val="5">★</span>
+          </div>
+          <input type="hidden" id="starValue" name="note" value="0"/>
+        </div>
+
+        <!-- CATÉGORIE -->
+        <div>
+          <label>Catégorie *</label>
+          <div class="cat-row">
+            <button type="button" class="cat-btn bug" onclick="selectCat(this,'Bug')">🔧 Bug</button>
+            <button type="button" class="cat-btn suggestion" onclick="selectCat(this,'Suggestion')">💡 Suggestion</button>
+            <button type="button" class="cat-btn compliment" onclick="selectCat(this,'Compliment')">⭐ Compliment</button>
+          </div>
+          <input type="hidden" id="catValue" name="categorie" value=""/>
+        </div>
+
+        <!-- VERSION REVIT -->
+        <div>
+          <label>Version Revit utilisée *</label>
+          <select name="revit_version" required>
+            <option value="">-- Sélectionner --</option>
+            <option>Revit 2024</option>
+            <option>Revit 2023</option>
+            <option>Revit 2022</option>
+            <option>Revit 2021</option>
+            <option>Revit 2020 ou antérieur</option>
+          </select>
+        </div>
+
+        <!-- NOM + EMAIL -->
+        <div class="form-row">
+          <div><label>Prénom</label><input type="text" name="prenom" placeholder="Jean"/></div>
+          <div><label>Email</label><input type="email" name="email" placeholder="jean@cabinet.com"/></div>
+        </div>
+
+        <!-- MESSAGE -->
+        <div>
+          <label>Votre retour *</label>
+          <textarea name="message" placeholder="Décrivez votre expérience, le problème rencontré ou votre suggestion..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Envoyer mon feedback →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- DOCS -->
+<section id="docs">
+  <div class="section-label">Documentation</div>
+  <h2>Tout pour bien démarrer</h2>
+  <div class="docs-grid">
+    <a href="#" class="doc-card">
+      <div class="doc-icon">🚀</div>
+      <h4>Guide de démarrage</h4>
+      <p>Installez Skylightning et faites votre premier calcul en moins de 10 minutes.</p>
+    </a>
+    <a href="#" class="doc-card">
+      <div class="doc-icon">⚙️</div>
+      <h4>Configuration Revit</h4>
+      <p>Paramétrez vos familles de luminaires pour des résultats optimaux.</p>
+    </a>
+    <a href="#" class="doc-card">
+      <div class="doc-icon">📐</div>
+      <h4>Norme EN 12464</h4>
+      <p>Comprendre les critères de conformité et leur application dans Skylightning.</p>
+    </a>
+    <a href="#" class="doc-card">
+      <div class="doc-icon">🎨</div>
+      <h4>Rendu faux-couleurs</h4>
+      <p>Interpréter et configurer la cartographie lumineuse de vos locaux.</p>
+    </a>
+    <a href="#" class="doc-card">
+      <div class="doc-icon">📄</div>
+      <h4>Export PDF</h4>
+      <p>Personnalisez et générez vos rapports d'étude d'éclairement professionnels.</p>
+    </a>
+    <a href="#" class="doc-card">
+      <div class="doc-icon">❓</div>
+      <h4>FAQ Beta</h4>
+      <p>Les questions fréquentes des beta-testeurs.</p>
+    </a>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-wrap">
+    <div class="contact-info">
+      <div class="section-label">Contact</div>
+      <h2>Une question ?<br/>Parlons-en.</h2>
+      <p>Démo, question technique ou téléchargement Beta — l'équipe Skylightning vous répond rapidement.</p>
+      <div class="contact-detail">
+        <div class="icon">✉️</div>
+        <div class="text"><strong>Email</strong><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="13707c7d677270675360786a7f7a747b673e637f66747a7d3d707c7e">[email&#160;protected]</a></span></div>
+      </div>
+      <div class="contact-detail">
+        <div class="icon">💬</div>
+        <div class="text"><strong>Réponse rapide</strong><span>Sous 24h en jours ouvrés</span></div>
+      </div>
+      <div class="contact-detail">
+        <div class="icon">🌍</div>
+        <div class="text"><strong>Langue</strong><span>Français — English coming soon</span></div>
+      </div>
+    </div>
+    <div>
+      <form onsubmit="handleContact(event)">
+        <div class="form-row">
+          <div><label>Prénom *</label><input type="text" placeholder="Jean" required/></div>
+          <div><label>Nom *</label><input type="text" placeholder="Dupont" required/></div>
+        </div>
+        <div><label>Email *</label><input type="email" placeholder="jean.dupont@cabinet.com" required/></div>
+        <div>
+          <label>Sujet</label>
+          <select>
+            <option>Téléchargement Beta</option>
+            <option>Question technique</option>
+            <option>Partenariat</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div><label>Message *</label><textarea placeholder="Décrivez votre demande..." required></textarea></div>
+        <button type="submit" class="btn-submit">Envoyer le message →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="#" class="nav-logo" style="color:white;">Sky<span style="color:#60A5FA">lightning</span></a>
+      <p>Le plugin Revit qui calcule vos études d'éclairement directement dans votre maquette, pour les Bureaux d'étude, Architectes et particuliers.</p>
+    </div>
+    <div class="footer-links">
+      <h5>Produit</h5>
+      <ul>
+        <li><a href="#features">Fonctionnalités</a></li>
+        <li><a href="#beta">Beta gratuite</a></li>
+        <li><a href="#docs">Documentation</a></li>
+      </ul>
+    </div>
+    <div class="footer-links">
+      <h5>Légal</h5>
+      <ul>
+        <li><a href="#">Conditions d'utilisation</a></li>
+        <li><a href="#">Politique de confidentialité</a></li>
+        <li><a href="#">Licence commerciale</a></li>
+      </ul>
+    </div>
+    <div class="footer-links">
+      <h5>Contact</h5>
+      <ul>
+        <li><a href="#contact">Nous écrire</a></li>
+        <li><a href="#feedback">Feedback Beta</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© <script>document.write(new Date().getFullYear())</script> Skylightning — Tous droits réservés.</span>
+    <span>Conçu pour les professionnels de la conception 🇫🇷</span>
+  </div>
+</footer>
+
+<div id="toast">✅ Feedback envoyé ! Merci pour votre retour.</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  // ── ÉTOILES ──
+  let currentStar = 0;
+  document.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', () => {
+      currentStar = parseInt(star.dataset.val);
+      document.getElementById('starValue').value = currentStar;
+      document.querySelectorAll('.star').forEach((s,i) => {
+        s.classList.toggle('active', i < currentStar);
+      });
+    });
+    star.addEventListener('mouseenter', () => {
+      const val = parseInt(star.dataset.val);
+      document.querySelectorAll('.star').forEach((s,i) => s.classList.toggle('active', i < val));
+    });
+    star.parentElement.addEventListener('mouseleave', () => {
+      document.querySelectorAll('.star').forEach((s,i) => s.classList.toggle('active', i < currentStar));
+    });
+  });
+
+  // ── CATÉGORIE ──
+  function selectCat(btn, val) {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('catValue').value = val;
+  }
+
+  // ── FEEDBACK SUBMIT ──
+  function handleFeedback(e) {
+    e.preventDefault();
+    if (currentStar === 0) { showToast('⚠️ Merci de donner une note !'); return; }
+    if (!document.getElementById('catValue').value) { showToast('⚠️ Merci de choisir une catégorie !'); return; }
+
+    // Ici tu brancheras ton API / serveur
+    const data = {
+      note: currentStar,
+      categorie: document.getElementById('catValue').value,
+      revit: e.target.revit_version.value,
+      prenom: e.target.prenom.value,
+      email: e.target.email.value,
+      message: e.target.message.value,
+      date: new Date().toISOString(),
+      source: 'site'
+    };
+    console.log('Feedback reçu :', data);
+    // → fetch('https://ton-api.com/api/feedback', { method:'POST', body: JSON.stringify(data) })
+
+    showToast('✅ Feedback envoyé ! Merci pour votre retour.');
+    e.target.reset();
+    currentStar = 0;
+    document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('catValue').value = '';
+  }
+
+  // ── CONTACT SUBMIT ──
+  function handleContact(e) {
+    e.preventDefault();
+    showToast('✅ Message envoyé ! On vous répond sous 24h.');
+    e.target.reset();
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    const isWarn = msg.startsWith('⚠️');
+    toast.classList.toggle('warn', isWarn);
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); toast.classList.remove('warn'); }, 4000);
+  }
+
+  // ── MENU MOBILE ──
+  function toggleMenu() {
+    const links = document.querySelector('.nav-links');
+    const hamburger = document.querySelector('.hamburger');
+    const isOpen = links.classList.contains('open');
+
+    links.classList.toggle('open', !isOpen);
+    hamburger.setAttribute('aria-expanded', String(!isOpen));
+
+    if (!isOpen) {
+      // Ferme le menu automatiquement si on clique sur un lien
+      links.querySelectorAll('a').forEach(link => {
+        link.onclick = () => {
+          links.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+        };
+      });
+    }
+  }
+
+  // ── TÉLÉCHARGEMENT BETA ──
+  function handleBetaDownload(e) {
+    e.preventDefault();
+    const prenom = e.target.prenom.value.trim();
+    const email = e.target.email.value.trim();
+    // Enregistrement de l'utilisateur beta
+    console.log('Nouvel utilisateur beta :', { prenom, email, date: new Date().toISOString() });
+    // → fetch('https://ton-api.com/api/beta/register', { method:'POST', body: JSON.stringify({ prenom, email }) })
+    // Déclenchement du téléchargement
+    window.location.href = 'https://ton-site.com/downloads/skylightning-beta.zip';
+    showToast('✅ Bienvenue ' + prenom + ' ! Votre téléchargement commence...');
+    e.target.reset();
+  }
+
+  // ── SCROLL ANIMATIONS ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.feat-card, .comp-card, .doc-card').forEach(card => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+    card.style.transition = 'all 0.6s ease';
+    observer.observe(card);
+  });
+</script>
+</body>
+</html>
