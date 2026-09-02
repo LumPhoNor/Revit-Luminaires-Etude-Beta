@@ -86,6 +86,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>Assets\Logo\%(Filename)%(Extension)</Link>
     </None>
+    <None Include="Assets\Fonts\*.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Assets\Fonts\%(Filename)%(Extension)</Link>
+    </None>
   </ItemGroup>
 
   <Target Name="DeployToRevitAddins" AfterTargets="Build">

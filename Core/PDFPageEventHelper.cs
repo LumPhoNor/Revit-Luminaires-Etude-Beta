@@ -15,7 +15,8 @@ namespace RevitLightingPlugin.Core
         private string reportDate;
         private Font footerFont;
         private BaseFont headerBaseFont;
-        private static readonly BaseColor HeaderBlue = new BaseColor(29, 78, 216); // #1D4ED8 (Skylightning)
+        private static readonly BaseColor HeaderBlue = new BaseColor(29, 78, 216);  // #1D4ED8 (Skylightning — "lightning")
+        private static readonly BaseColor HeaderInk  = new BaseColor(17, 24, 39);   // #111827 (Skylightning — "Sky", identique au site)
 
         public PDFPageEventHelper(string projectName, string reportDate)
         {
@@ -23,7 +24,19 @@ namespace RevitLightingPlugin.Core
             this.reportDate = reportDate;
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
             footerFont = new Font(bf, 8, Font.NORMAL, BaseColor.GRAY);
-            headerBaseFont = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+
+            // Même police que le logo texte du site vitrine (Playfair Display, graisse
+            // Black/900), embarquée dans le plugin. Repli sur Helvetica Bold si le
+            // fichier de police est absent pour une raison quelconque.
+            try
+            {
+                headerBaseFont = BaseFont.CreateFont(
+                    SkylightningTheme.PlayfairDisplayBlackPath, BaseFont.CP1252, BaseFont.EMBEDDED);
+            }
+            catch
+            {
+                headerBaseFont = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            }
         }
 
         public override void OnEndPage(PdfWriter writer, Document document)
@@ -64,15 +77,18 @@ namespace RevitLightingPlugin.Core
 
         /// <summary>
         /// Dessine le logo Skylightning à gauche et le texte "Skylightning"
-        /// (Sky en noir, lightning en bleu) en en-tête de chaque page.
+        /// (Sky en noir, lightning en bleu, police Playfair Display Black —
+        /// identique au site vitrine) en en-tête de chaque page.
         /// </summary>
         private void DrawHeader(PdfWriter writer, Document document)
         {
             PdfContentByte cb = writer.DirectContent;
             float pageHeight = document.PageSize.Height;
             float marginLeft = document.LeftMargin;
-            float logoHeight = 26f;
+            float topGap = 16f;
+            float logoHeight = 40f;
             float logoWidth = logoHeight;
+            float logoBottomY = pageHeight - topGap - logoHeight;
 
             try
             {
@@ -81,20 +97,20 @@ namespace RevitLightingPlugin.Core
                     Image logo = Image.GetInstance(SkylightningTheme.LogoRibbonIconPath);
                     logoWidth = logo.Width * (logoHeight / logo.Height);
                     logo.ScaleToFit(logoWidth, logoHeight);
-                    logo.SetAbsolutePosition(marginLeft, pageHeight - 20 - logoHeight);
+                    logo.SetAbsolutePosition(marginLeft, logoBottomY);
                     cb.AddImage(logo);
                 }
             }
             catch { /* logo optionnel : le rapport reste valide sans lui */ }
 
-            float textX = marginLeft + logoWidth + 8;
-            float textY = pageHeight - 20 - (logoHeight / 2) - 5;
-            float fontSize = 14f;
+            float fontSize = 24f;
+            float textX = marginLeft + logoWidth + 10;
+            float textY = logoBottomY + (logoHeight - fontSize) / 2f + 4f;
 
             cb.SaveState();
             cb.BeginText();
             cb.SetFontAndSize(headerBaseFont, fontSize);
-            cb.SetColorFill(BaseColor.BLACK);
+            cb.SetColorFill(HeaderInk);
             cb.ShowTextAligned(Element.ALIGN_LEFT, "Sky", textX, textY, 0);
             cb.EndText();
 

@@ -71,7 +71,9 @@ namespace RevitLightingPlugin.Core
 
             try
             {
-                pdfDocument = new iTextSharp.text.Document(PageSize.A4, 40, 40, 60, 60);
+                // Marge haute agrandie (60 -> 75) pour laisser la place au logo et au
+                // texte "Skylightning" plus grands en en-tête (PDFPageEventHelper).
+                pdfDocument = new iTextSharp.text.Document(PageSize.A4, 40, 40, 75, 60);
                 writer = PdfWriter.GetInstance(pdfDocument, new FileStream(outputPath, FileMode.Create));
 
                 // Ajouter les events pour le footer

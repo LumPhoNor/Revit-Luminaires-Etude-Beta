@@ -33,6 +33,11 @@ namespace RevitLightingPlugin.UI
         public static readonly string LogoRibbonIconPath =
             System.IO.Path.Combine(AssemblyDir, "Assets", "Logo", "Nouveau icone Skylightning - Ruban.png");
 
+        // Police du logo texte "Skylightning" (identique au site vitrine : Playfair
+        // Display, graisse 900/Black).
+        public static readonly string PlayfairDisplayBlackPath =
+            System.IO.Path.Combine(AssemblyDir, "Assets", "Fonts", "PlayfairDisplay-Black.ttf");
+
         // ── Palette gris neutre (aspect Revit) ───────────────────────────────
         // Fonds fenêtres
         public static readonly Color NavyDark  = Color.FromRgb(245, 246, 248);  // fond principal
