@@ -499,7 +499,7 @@
       <p>Démo, question technique ou téléchargement Beta — l'équipe Skylightning vous répond rapidement.</p>
       <div class="contact-detail">
         <div class="icon">✉️</div>
-        <div class="text"><strong>Email</strong><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="13707c7d677270675360786a7f7a747b673e637f66747a7d3d707c7e">[email&#160;protected]</a></span></div>
+        <div class="text"><strong>Email</strong><span><a href="mailto:skylightning.support@gmail.com">skylightning.support@gmail.com</a></span></div>
       </div>
       <div class="contact-detail">
         <div class="icon">💬</div>
@@ -511,22 +511,22 @@
       </div>
     </div>
     <div>
-      <form onsubmit="handleContact(event)">
+      <form id="contactForm" onsubmit="handleContact(event)">
         <div class="form-row">
-          <div><label>Prénom *</label><input type="text" placeholder="Jean" required/></div>
-          <div><label>Nom *</label><input type="text" placeholder="Dupont" required/></div>
+          <div><label>Prénom *</label><input type="text" name="prenom" placeholder="Jean" required/></div>
+          <div><label>Nom *</label><input type="text" name="nom" placeholder="Dupont" required/></div>
         </div>
-        <div><label>Email *</label><input type="email" placeholder="jean.dupont@cabinet.com" required/></div>
+        <div><label>Email *</label><input type="email" name="email" placeholder="jean.dupont@cabinet.com" required/></div>
         <div>
           <label>Sujet</label>
-          <select>
+          <select name="sujet">
             <option>Téléchargement Beta</option>
             <option>Question technique</option>
             <option>Partenariat</option>
             <option>Autre</option>
           </select>
         </div>
-        <div><label>Message *</label><textarea placeholder="Décrivez votre demande..." required></textarea></div>
+        <div><label>Message *</label><textarea name="message" placeholder="Décrivez votre demande..." required></textarea></div>
         <button type="submit" class="btn-submit">Envoyer le message →</button>
       </form>
     </div>
@@ -572,7 +572,19 @@
 
 <div id="toast">✅ Feedback envoyé ! Merci pour votre retour.</div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
+  // ── FORMSPREE (livraison des formulaires vers skylightning.support@gmail.com) ──
+  const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mppzrdkl';
+
+  async function submitToFormspree(data) {
+    const res = await fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Formspree error ' + res.status);
+  }
+
   // ── ÉTOILES ──
   let currentStar = 0;
   document.querySelectorAll('.star').forEach(star => {
@@ -600,13 +612,13 @@
   }
 
   // ── FEEDBACK SUBMIT ──
-  function handleFeedback(e) {
+  async function handleFeedback(e) {
     e.preventDefault();
     if (currentStar === 0) { showToast('⚠️ Merci de donner une note !'); return; }
     if (!document.getElementById('catValue').value) { showToast('⚠️ Merci de choisir une catégorie !'); return; }
 
-    // Ici tu brancheras ton API / serveur
     const data = {
+      _subject: 'Nouveau feedback Skylightning',
       note: currentStar,
       categorie: document.getElementById('catValue').value,
       revit: e.target.revit_version.value,
@@ -614,24 +626,43 @@
       email: e.target.email.value,
       message: e.target.message.value,
       date: new Date().toISOString(),
-      source: 'site'
+      source: 'site - formulaire feedback'
     };
-    console.log('Feedback reçu :', data);
-    // → fetch('https://ton-api.com/api/feedback', { method:'POST', body: JSON.stringify(data) })
 
-    showToast('✅ Feedback envoyé ! Merci pour votre retour.');
-    e.target.reset();
-    currentStar = 0;
-    document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('catValue').value = '';
+    try {
+      await submitToFormspree(data);
+      showToast('✅ Feedback envoyé ! Merci pour votre retour.');
+      e.target.reset();
+      currentStar = 0;
+      document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('catValue').value = '';
+    } catch (err) {
+      showToast('⚠️ Échec de l\'envoi, réessayez plus tard.');
+    }
   }
 
   // ── CONTACT SUBMIT ──
-  function handleContact(e) {
+  async function handleContact(e) {
     e.preventDefault();
-    showToast('✅ Message envoyé ! On vous répond sous 24h.');
-    e.target.reset();
+    const data = {
+      _subject: 'Nouveau message contact Skylightning',
+      prenom: e.target.prenom.value,
+      nom: e.target.nom.value,
+      email: e.target.email.value,
+      sujet: e.target.sujet.value,
+      message: e.target.message.value,
+      date: new Date().toISOString(),
+      source: 'site - formulaire contact'
+    };
+
+    try {
+      await submitToFormspree(data);
+      showToast('✅ Message envoyé ! On vous répond sous 24h.');
+      e.target.reset();
+    } catch (err) {
+      showToast('⚠️ Échec de l\'envoi, réessayez plus tard.');
+    }
   }
 
   // ── TOAST ──
@@ -665,17 +696,26 @@
   }
 
   // ── TÉLÉCHARGEMENT BETA ──
-  function handleBetaDownload(e) {
+  async function handleBetaDownload(e) {
     e.preventDefault();
     const prenom = e.target.prenom.value.trim();
     const email = e.target.email.value.trim();
-    // Enregistrement de l'utilisateur beta
-    console.log('Nouvel utilisateur beta :', { prenom, email, date: new Date().toISOString() });
-    // → fetch('https://ton-api.com/api/beta/register', { method:'POST', body: JSON.stringify({ prenom, email }) })
-    // Déclenchement du téléchargement
-    window.location.href = 'https://ton-site.com/downloads/skylightning-beta.zip';
-    showToast('✅ Bienvenue ' + prenom + ' ! Votre téléchargement commence...');
-    e.target.reset();
+    const data = {
+      _subject: 'Nouvel inscrit Beta Skylightning',
+      prenom, email,
+      date: new Date().toISOString(),
+      source: 'site - formulaire beta'
+    };
+
+    try {
+      await submitToFormspree(data);
+      // TODO: URL de téléchargement placeholder à remplacer par l'hébergement réel du zip beta.
+      window.location.href = 'https://ton-site.com/downloads/skylightning-beta.zip';
+      showToast('✅ Bienvenue ' + prenom + ' ! Votre téléchargement commence...');
+      e.target.reset();
+    } catch (err) {
+      showToast('⚠️ Échec de l\'inscription, réessayez plus tard.');
+    }
   }
 
   // ── SCROLL ANIMATIONS ──
