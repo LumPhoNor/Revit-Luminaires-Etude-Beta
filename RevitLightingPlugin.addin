@@ -6,6 +6,6 @@
     <FullClassName>RevitLightingPlugin.Application</FullClassName>
     <ClientId>B8D7C3F2-9E5A-4A1F-8D2B-3E6F9A7C5D1E</ClientId>
     <VendorId>ADSK</VendorId>
-    <VendorDescription>Lighting Analysis Plugin Pro v2.0</VendorDescription>
+    <VendorDescription>Skylightning</VendorDescription>
   </AddIn>
 </RevitAddIns>

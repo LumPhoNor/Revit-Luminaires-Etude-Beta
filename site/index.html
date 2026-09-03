@@ -709,8 +709,7 @@
 
     try {
       await submitToFormspree(data);
-      // TODO: URL de téléchargement placeholder à remplacer par l'hébergement réel du zip beta.
-      window.location.href = 'https://ton-site.com/downloads/skylightning-beta.zip';
+      window.location.href = 'https://getskylightning.com/downloads/skylightning-beta.zip';
       showToast('✅ Bienvenue ' + prenom + ' ! Votre téléchargement commence...');
       e.target.reset();
     } catch (err) {

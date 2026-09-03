@@ -13,6 +13,9 @@ using RevitLightingPlugin.UI;
 
 namespace RevitLightingPlugin.Commands
 {
+    // Nom de classe retrouvé par Revit via réflexion (bouton ruban dans Application.cs) :
+    // doit rester intact après obfuscation, voir scripts/build-beta-release.ps1.
+    [System.Reflection.Obfuscation(Exclude = true, ApplyToMembers = true)]
     [Transaction(TransactionMode.Manual)]
     public class CalculCommand : IExternalCommand
     {
@@ -28,6 +31,16 @@ namespace RevitLightingPlugin.Commands
                     "Aucun paramètre configuré.\n\n" +
                     "Veuillez d'abord cliquer sur « Paramètres » pour configurer " +
                     "les pièces et les options de calcul.");
+                return Result.Cancelled;
+            }
+
+            var gate = RemoteLicenseGate.EnsureAccessAllowed();
+            if (!gate.Allowed)
+            {
+                Logger.Warning("CalculCmd", $"Accès bloqué par le contrôle distant : {gate.Message}");
+                TaskDialog.Show("Skylightning",
+                    gate.Message ?? "L'accès à Skylightning est actuellement suspendu. " +
+                    "Contactez skylightning.support@gmail.com pour plus d'informations.");
                 return Result.Cancelled;
             }
 

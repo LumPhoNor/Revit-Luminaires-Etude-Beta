@@ -9,6 +9,9 @@ using RevitLightingPlugin.UI;
 
 namespace RevitLightingPlugin
 {
+    // Nom de classe retrouvé par Revit via réflexion (RevitLightingPlugin.addin) :
+    // doit rester intact après obfuscation, voir scripts/build-beta-release.ps1.
+    [System.Reflection.Obfuscation(Exclude = true, ApplyToMembers = true)]
     public class Application : IExternalApplication
     {
         private const string TabName = "Skylightning";

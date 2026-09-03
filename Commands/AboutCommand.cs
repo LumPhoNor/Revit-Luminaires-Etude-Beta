@@ -5,6 +5,9 @@ using Autodesk.Revit.UI;
 
 namespace RevitLightingPlugin.Commands
 {
+    // Nom de classe retrouvé par Revit via réflexion (bouton ruban dans Application.cs) :
+    // doit rester intact après obfuscation, voir scripts/build-beta-release.ps1.
+    [System.Reflection.Obfuscation(Exclude = true, ApplyToMembers = true)]
     [Transaction(TransactionMode.ReadOnly)]
     public class AboutCommand : IExternalCommand
     {
