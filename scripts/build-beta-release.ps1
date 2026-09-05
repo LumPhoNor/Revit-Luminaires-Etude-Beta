@@ -96,24 +96,27 @@ foreach ($v in $Versions) {
     Write-Host "OK -> $versionStage" -ForegroundColor Green
 }
 
-$readme = @"
-Skylightning - Plugin Revit (Beta)
+foreach ($v in $Versions) {
+    $info         = $revitInfo[$v]
+    $versionStage = Join-Path $stagingRoot "Revit$($info.Year)"
+
+    $readme = @"
+Skylightning - Plugin Revit $($info.Year) (Beta)
 ====================================
 
 Installation :
-1. Fermez Revit s'il est ouvert.
-2. Copiez le contenu du dossier correspondant a votre version de Revit
-   (Revit2024, Revit2025 ou Revit2026) dans :
-   %ProgramData%\Autodesk\Revit\Addins\<annee>\
-   (ex: C:\ProgramData\Autodesk\Revit\Addins\2025\)
+1. Fermez Revit $($info.Year) s'il est ouvert.
+2. Copiez le contenu de ce zip dans :
+   %ProgramData%\Autodesk\Revit\Addins\$($info.Year)\
 3. Relancez Revit. L'onglet "Skylightning" apparait dans le ruban.
 
 Support / feedback : skylightning.support@gmail.com
 "@
-Set-Content -Path (Join-Path $stagingRoot "LISEZMOI.txt") -Value $readme -Encoding utf8
+    Set-Content -Path (Join-Path $versionStage "LISEZMOI.txt") -Value $readme -Encoding utf8
 
-$zipPath = Join-Path $repoRoot "bin\skylightning-beta.zip"
-if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-Compress-Archive -Path (Join-Path $stagingRoot "*") -DestinationPath $zipPath -CompressionLevel Optimal
+    $zipPath = Join-Path $repoRoot "bin\skylightning-beta-$($info.Year).zip"
+    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+    Compress-Archive -Path (Join-Path $versionStage "*") -DestinationPath $zipPath -CompressionLevel Optimal
 
-Write-Host "`nZip beta pret : $zipPath" -ForegroundColor Green
+    Write-Host "Zip beta pret : $zipPath" -ForegroundColor Green
+}

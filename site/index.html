@@ -314,16 +314,16 @@
   <div class="beta-grid">
     <div>
       <div class="section-label">Accès Beta</div>
-      <h2>Testez Skylightning<br/>gratuitement<br/><span style="color:#60A5FA">pendant 30 jours</span></h2>
+      <h2>Testez Skylightning<br/>gratuitement<br/><span style="color:#60A5FA">en version Beta libre</span></h2>
       <p class="beta-desc">
-        Skylightning est en version Beta. Nous offrons un accès <strong>100% gratuit pendant 30 jours</strong>
-        à partir de votre téléchargement. En échange, votre retour d'expérience nous aide à
+        Skylightning est en version Beta. Nous offrons un accès <strong>100% gratuit et sans limite de durée</strong>
+        pendant toute la phase Beta. En échange, votre retour d'expérience nous aide à
         construire le meilleur outil possible pour tous les professionnels de la conception.
       </p>
       <ul class="beta-perks">
         <li><span>✅</span><span>Accès à toutes les fonctionnalités sans restriction</span></li>
         <li><span>✅</span><span>Aucune carte bancaire requise</span></li>
-        <li><span>✅</span><span>30 jours à partir de votre installation</span></li>
+        <li><span>✅</span><span>Accès libre pendant toute la phase Beta</span></li>
         <li><span>✅</span><span>Support direct avec l'équipe Skylightning</span></li>
         <li><span>✅</span><span>Vos retours influencent directement les futures versions</span></li>
       </ul>
@@ -334,7 +334,7 @@
       <div class="beta-period">pendant la période Beta</div>
       <div class="beta-duration" style="margin-bottom:1.5rem;">
         <span style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);padding:0.4rem 1rem;border-radius:99px;font-size:0.82rem;">
-          ⏱ Période d'essai de <strong style="color:#34D399;margin-left:0.3rem;">30 jours</strong>&nbsp;à l'installation
+          🔓 Accès <strong style="color:#34D399;margin-left:0.3rem;">libre</strong>&nbsp;pendant la Beta
         </span>
       </div>
       <form id="betaForm" onsubmit="handleBetaDownload(event)" style="text-align:left;">
@@ -346,9 +346,18 @@
           <label style="font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.5);display:block;margin-bottom:0.35rem;letter-spacing:0.05em;text-transform:uppercase;">Email *</label>
           <input type="email" name="email" placeholder="votre@email.com" required style="width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:white;font-family:DM Sans,sans-serif;font-size:0.9rem;outline:none;"/>
         </div>
+        <div style="margin-bottom:1.25rem;">
+          <label style="font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.5);display:block;margin-bottom:0.35rem;letter-spacing:0.05em;text-transform:uppercase;">Version Revit *</label>
+          <select name="revit_version" required style="width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:white;font-family:DM Sans,sans-serif;font-size:0.9rem;outline:none;">
+            <option value="" style="color:#111827;background:white;">-- Sélectionner --</option>
+            <option value="2026" style="color:#111827;background:white;">Revit 2026</option>
+            <option value="2025" style="color:#111827;background:white;">Revit 2025</option>
+            <option value="2024" style="color:#111827;background:white;">Revit 2024</option>
+          </select>
+        </div>
         <button type="submit" class="btn-beta" style="margin-bottom:0.75rem;">⬇️ Télécharger la Beta gratuitement</button>
       </form>
-      <p class="beta-note">Aucun engagement · Pas de carte bancaire · 30 jours offerts</p>
+      <p class="beta-note">Aucun engagement · Pas de carte bancaire · Accès libre pendant la Beta</p>
     </div>
   </div>
 </section>
@@ -426,11 +435,9 @@
           <label>Version Revit utilisée *</label>
           <select name="revit_version" required>
             <option value="">-- Sélectionner --</option>
+            <option>Revit 2026</option>
+            <option>Revit 2025</option>
             <option>Revit 2024</option>
-            <option>Revit 2023</option>
-            <option>Revit 2022</option>
-            <option>Revit 2021</option>
-            <option>Revit 2020 ou antérieur</option>
           </select>
         </div>
 
@@ -700,16 +707,18 @@
     e.preventDefault();
     const prenom = e.target.prenom.value.trim();
     const email = e.target.email.value.trim();
+    const revitVersion = e.target.revit_version.value;
     const data = {
       _subject: 'Nouvel inscrit Beta Skylightning',
       prenom, email,
+      revit_version: revitVersion,
       date: new Date().toISOString(),
       source: 'site - formulaire beta'
     };
 
     try {
       await submitToFormspree(data);
-      window.location.href = 'https://getskylightning.com/downloads/skylightning-beta.zip';
+      window.location.href = 'https://getskylightning.com/downloads/skylightning-beta-' + revitVersion + '.zip';
       showToast('✅ Bienvenue ' + prenom + ' ! Votre téléchargement commence...');
       e.target.reset();
     } catch (err) {
